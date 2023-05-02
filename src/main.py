@@ -1,6 +1,5 @@
 import sys 
 import random 
-import math
 
 import pymunk
 import pymunk.pygame_util
@@ -13,7 +12,6 @@ import constants
 
 # Have the same results with every run of the simulation
 random.seed(1)
-
 
 def random_sign():
     return 1 if random.randint(0, 2) < 1 else -1
@@ -32,7 +30,7 @@ class SRobot:
         self.body = self.__add_robot_body(space, position=(x, y))
 
     
-    # TODO: this function will be changed accordingly when the RL will be added
+    # TODO: this function will be changed accordingly when RL will be added
     # source: https://github.com/viblo/pymunk/blob/master/pymunk/examples/tank.py 
     def update(self, space, dt, target_pos):
         """Update the position of the robot."""
@@ -58,15 +56,11 @@ class SRobot:
 
 
     def __add_robot_body(self, space, position):
-        """Create and add to the space a box shape for the robot body
+        """Create and add to the space a box shape for the robot body.
         
         size[cm]; mass[kg]"""
-
-        inertia = pymunk.moment_for_circle(mass=self.MASS, 
-                                           inner_radius=0,
-                                           outer_radius=self.RADIUS,
-                                           offset=(0, 0))
-        body = pymunk.Body(self.MASS, inertia)
+    
+        body = pymunk.Body()
         body.position = position
 
         shape = pymunk.Circle(body, self.RADIUS)

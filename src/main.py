@@ -1,5 +1,6 @@
 import sys 
 import random 
+import math
 
 import pymunk
 import pymunk.pygame_util
@@ -13,43 +14,22 @@ import constants
 # Have the same results with every run of the simulation
 random.seed(1)
 
+
+def random_sign():
+    return 1 if random.randint(0, 2) < 1 else -1
+
+
 class SRobot: 
     MASS = 0.65  # kg
     RADIUS = 10  # cm
 
     def __init__(self, space, homebase_pos):
-        # Create a control body that will be used together with the main body
-        # to add motion to the robot
-        self.control_body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
-
         # Spawn the robot in the vicinity of the home base
-        # TODO: randomly generate the position for multiple robots
-        x = homebase_pos[0] + 25
-        y = homebase_pos[1] + 25
+        x = homebase_pos[0] + random_sign() * random.randint(20, 40)
+        y = homebase_pos[1] + random_sign() * random.randint(20, 40)
 
-        self.control_body.position = x, y
-
-        space.add(self.control_body)
-
-        # Create the normal body
+        # Create the body of the robot
         self.body = self.__add_robot_body(space, position=(x, y))
-        
-        # Create the pivot element
-        self.pivot = pymunk.PivotJoint(self.control_body, self.body, (0, 0), (0, 0))
-        
-        # Add the pivot element to the space
-        space.add(self.pivot)
-        self.pivot.max_bias = 0  # disable joint correction
-        self.pivot.max_force = 10000  # emulate linear friction
-
-        # Create the gear element
-        self.gear = pymunk.GearJoint(self.control_body, self.body, 0.0, 1.0)
-        
-        # Add the gear element to the space
-        space.add(self.gear)
-        self.gear.error_bias = 0  # attempt to fully correct the joint each step
-        self.gear.max_bias = 1.2  # but limit it's angular correction rate
-        self.gear.max_force = 50000  # emulate angular friction
 
     
     # TODO: this function will be changed accordingly when the RL will be added
@@ -59,12 +39,12 @@ class SRobot:
         
         target_delta = target_pos - self.body.position 
         turn = self.body.rotation_vector.cpvunrotate(target_delta).angle
-        self.control_body.angle = self.body.angle - turn 
+        self.body.angle = self.body.angle - turn
 
         # Drive the robot towards the target object
         if (target_pos - self.body.position).get_length_sqrd() < 30 ** 2:
             # If the robot is close enough to the target object, stop
-            self.control_body.velocity = 0, 0
+            self.body.velocity = 0, 0
         else:
             if target_delta.dot(self.body.rotation_vector) > 0.0:
                 direction = 1.0
@@ -72,7 +52,7 @@ class SRobot:
                 direction = -1.0
 
             dv = Vec2d(30.0 * direction, 0.0)
-            self.control_body.velocity = self.body.rotation_vector.cpvrotate(dv)
+            self.body.velocity = self.body.rotation_vector.cpvrotate(dv)
 
         space.step(dt)
 
@@ -82,7 +62,11 @@ class SRobot:
         
         size[cm]; mass[kg]"""
 
-        body = pymunk.Body()
+        inertia = pymunk.moment_for_circle(mass=self.MASS, 
+                                           inner_radius=0,
+                                           outer_radius=self.RADIUS,
+                                           offset=(0, 0))
+        body = pymunk.Body(self.MASS, inertia)
         body.position = position
 
         shape = pymunk.Circle(body, self.RADIUS)
@@ -117,7 +101,10 @@ def main():
     target = add_target(space)
     homebase = add_homebase(space)
     homebase_center = int(homebase.body.position.x) + 10, int(homebase.body.position.y)
-    robot = SRobot(space, homebase.body.position)
+    
+    robots = []
+    for _ in range(3):
+        robots.append(SRobot(space, homebase.body.position))
 
     # Declare the optional attributes of the space
     draw_options = pymunk.pygame_util.DrawOptions(screen)
@@ -145,7 +132,9 @@ def main():
                            width=1)
 
         space.debug_draw(draw_options)
-        robot.update(space, 1 / constants.FPS, target.body.position)
+
+        for i in range(3):
+            robots[i].update(space, 1 / constants.FPS, target.body.position)
 
         pygame.display.flip()
         clock.tick(constants.FPS)

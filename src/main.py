@@ -1,5 +1,6 @@
 import sys 
 import random 
+import math
 
 import pymunk
 import pymunk.pygame_util
@@ -17,6 +18,116 @@ def random_sign():
     return 1 if random.randint(0, 2) < 1 else -1
 
 
+class LaserSensor:
+    def __init__(self, range=400, n_angles=13, start_angle=-90, 
+                 angle_space=15, position=(0,0)):
+        """Initialize the sensor
+
+        Args:
+            max_range (int, optional): The maximum range that the sensor can work 
+            at. By default the sensor works from 0 to 400 cm.
+            
+            n_angles  (int, optional): The number of rays.By default the sensor
+            gets 13 angular readings.
+
+            start_angle  (int, optional): The starting angle in degrees (considering
+            that the starting point is on the left side)
+            
+            angle_space  (int, optional): The space between the rays. By default
+            the space between rays is 15 degrees.
+
+            position  (int, optional): The position where the LaserSensor is 
+            placed on in the pymunk space.
+        """
+
+        self.range = range
+        self.n_angles = n_angles
+        self.angle_space = angle_space  # Leave this amount of space between rays
+        self.position = (position[0]+ 100, position[1])
+        self.start_angle = start_angle
+        self.sensor_angle = 0
+
+        # Save the pygame surface of the arena
+        self.screen = pygame.display.get_surface()
+
+    def __get_dist(self, obj_pos):
+        """Returns the distance from the position of the laser itself to an
+        object in the environment.
+        """
+
+        return math.sqrt((obj_pos[0] - self.position[0]) ** 2 + \
+                         (obj_pos[1] - self.position) ** 2)
+    
+    
+    def __get_fin_pos(self, angle):
+        """Return the position at the extremity of the ray given the angle from
+        the starting point.
+        """
+
+        # Convert the angle in degrees to radians
+        angle_rad = math.radians(angle)
+
+        # Get the x coordonate for the point in the 
+        # extremity of the current ray
+        x_fin = self.position[0] + self.range * math.cos(angle_rad)
+
+        # Get the y coordinate for the point in the 
+        # extremity of the current ray
+        y_fin = self.position[1] + self.range * math.sin(angle_rad)
+
+        return x_fin, y_fin
+
+
+    def update_position(self, pos, angle):
+        self.position = pos
+        self.sensor_angle = angle
+    
+    def get_reading(self):
+        # For every ray in the sensor, get a reading along its axis and check
+        # if an object was found
+
+        x_start, y_start = self.position[0], self.position[1]
+        arena_w, arena_h = self.screen.get_size()
+
+        for angle_idx in range(self.n_angles):
+            angle = math.degrees(self.sensor_angle) + self.start_angle + angle_idx * self.angle_space
+            
+            # Get the position of the extremity of the ray
+            x_fin, y_fin = self.__get_fin_pos(angle)
+
+            # Along the ray, check if there is any object 
+            for i in range(5, 100):
+                u = i / 100
+
+                # Get the position on the ray
+                x = int((1-u) * x_start + u * x_fin)
+                y = int((1-u) * y_start + u * y_fin)
+
+                # If the point is still within the arena coordonates
+                if 0 < x < arena_w and 0 < y < arena_h:
+                    # Get the color of the point 
+                    color = self.screen.get_at((x, y))
+
+                    if (color[0], color[1], color[2]) != constants.COLOR["artichoke"]:
+                        # print("detected object", time.time())
+
+                        break 
+            
+        return False
+    
+
+    def draw_sensor_angles(self):
+        for angle_idx in range(self.n_angles):
+            angle = math.degrees(self.sensor_angle) + self.start_angle + angle_idx * self.angle_space
+
+            # Get the position of the extremity of the ray
+            pos_fin = self.__get_fin_pos(angle)
+
+            pygame.draw.line(self.screen, (255, 0, 0), self.position, pos_fin, 1)
+
+
+# NOTE: The emulated Lidar sensor has a detection range of 0 to 4m of 360 degrees
+# and it was discretized using 13 angular readings
 class SRobot: 
     MASS = 0.65  # kg
     RADIUS = 10  # cm
@@ -29,14 +140,18 @@ class SRobot:
         # Create the body of the robot
         self.body = self.__add_robot_body(space, position=(x, y))
 
+        # Attach a LaserSensor to it
+        self.sensor = LaserSensor(position=(x, y))
     
     # TODO: this function will be changed accordingly when RL will be added
     # source: https://github.com/viblo/pymunk/blob/master/pymunk/examples/tank.py 
     def update(self, space, dt, target_pos):
         """Update the position of the robot."""
+
+        self.sensor.get_reading()
         
-        target_delta = target_pos - self.body.position 
-        turn = self.body.rotation_vector.cpvunrotate(target_delta).angle
+        target_delta = target_pos - self.body.position
+        turn = self.body.rotation_vector.cpvunrotate(target_delta).angle 
         self.body.angle = self.body.angle - turn
 
         # Drive the robot towards the target object
@@ -54,6 +169,11 @@ class SRobot:
 
         space.step(dt)
 
+        # Update the position of the sensor
+        self.sensor.update_position(self.body.position, self.body.angle)
+
+    def perception_sensor(self):
+        return 0    
 
     def __add_robot_body(self, space, position):
         """Create and add to the space a box shape for the robot body.
@@ -97,7 +217,7 @@ def main():
     homebase_center = int(homebase.body.position.x) + 10, int(homebase.body.position.y)
     
     robots = []
-    for _ in range(3):
+    for _ in range(constants.ROBOTS_NUMBER):
         robots.append(SRobot(space, homebase.body.position))
 
     # Declare the optional attributes of the space
@@ -127,8 +247,9 @@ def main():
 
         space.debug_draw(draw_options)
 
-        for i in range(3):
+        for i in range(constants.ROBOTS_NUMBER):
             robots[i].update(space, 1 / constants.FPS, target.body.position)
+            robots[i].sensor.draw_sensor_angles()
 
         pygame.display.flip()
         clock.tick(constants.FPS)

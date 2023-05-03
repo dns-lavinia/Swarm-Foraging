@@ -20,7 +20,7 @@ def random_sign():
 
 class LaserSensor:
     def __init__(self, range=400, n_angles=13, start_angle=-90, 
-                 angle_space=15, position=(0,0)):
+                 angle_space=15, position=(0,0), obj_angle=0):
         """Initialize the sensor
 
         Args:
@@ -45,7 +45,7 @@ class LaserSensor:
         self.angle_space = angle_space  # Leave this amount of space between rays
         self.position = (position[0]+ 100, position[1])
         self.start_angle = start_angle
-        self.sensor_angle = 0
+        self.sensor_angle = obj_angle
 
         # Save the pygame surface of the arena
         self.screen = pygame.display.get_surface()
@@ -79,6 +79,13 @@ class LaserSensor:
 
 
     def update_position(self, pos, angle):
+        """Update the position of the laser by also taking into the consideration
+        the orientation it has on the object it is placed on.
+
+        Args:
+            pos:  position of the object (robot)
+            angle:  angle of the object (robot)
+        """
         self.position = pos
         self.sensor_angle = angle
     
@@ -141,7 +148,7 @@ class SRobot:
         self.body = self.__add_robot_body(space, position=(x, y))
 
         # Attach a LaserSensor to it
-        self.sensor = LaserSensor(position=(x, y))
+        self.sensor = LaserSensor(position=(x, y), obj_angle=self.body.angle)
     
     # TODO: this function will be changed accordingly when RL will be added
     # source: https://github.com/viblo/pymunk/blob/master/pymunk/examples/tank.py 

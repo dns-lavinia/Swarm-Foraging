@@ -1,13 +1,17 @@
 import math
 import pygame
+import numpy as np
 
 # Local imports
 import constants 
+
+# sigma = uncertainty for distance and angle
+# random value around the 
     
                  
 class LaserSensor:
     def __init__(self, range=400, n_readings=13, start_angle=-90, 
-                 angle_space=15, position=(0,0), body_angle=0):
+                 angle_space=15, position=(0,0), body_angle=0, body_radius=10):
         """Initialize the sensor.
 
         Args:
@@ -28,6 +32,9 @@ class LaserSensor:
 
             body_angle  (int, optional): The orientation of the body that is 
             to be placed on.
+
+            body_radius (int, optional): The width of the body the sensor is placed
+            on. It is assumed that the body has a circular shape.
         """
 
         self.range = range
@@ -38,6 +45,7 @@ class LaserSensor:
         # Body dependent parameters
         self.position = (position[0]+ 100, position[1])
         self.sensor_angle = body_angle
+        self.body_radius = body_radius
 
         # Save the pygame surface of the arena
         self.screen = pygame.display.get_surface()
@@ -48,23 +56,27 @@ class LaserSensor:
         """
 
         return math.sqrt((obj_pos[0] - self.position[0]) ** 2 + \
-                         (obj_pos[1] - self.position) ** 2)
+                         (obj_pos[1] - self.position[1]) ** 2)
     
-    def __get_fin_pos(self, angle):
-        """Return the position at the extremity of the beam given the angle from
+    def __get_fin_pos(self, angle, length):
+        """Return the position at the extremity of the ray given the angle from
         the starting point.
+
+        Args:
+            angle: The angle at which the line is 
+            length: The length of the line
         """
 
         # Convert the angle in degrees to radians
         angle_rad = math.radians(angle)
 
         # Get the x coordonate for the point in the 
-        # extremity of the current beam
-        x_fin = self.position[0] + self.range * math.cos(angle_rad)
+        # extremity of the current ray
+        x_fin = self.position[0] + length * math.cos(angle_rad)
 
         # Get the y coordinate for the point in the 
-        # extremity of the current beam
-        y_fin = self.position[1] + self.range * math.sin(angle_rad)
+        # extremity of the current ray
+        y_fin = self.position[1] + length * math.sin(angle_rad)
 
         return x_fin, y_fin
 
@@ -81,49 +93,82 @@ class LaserSensor:
     
     def get_reading(self):
         """Perform all of the angular readings along the sensor's axis and check 
-        if an object was found."""
+        if an object was found.
         
-        x_start, y_start = self.position[0], self.position[1]
+        Returns a list containing the coordinates of obsticales or None if no
+        obstacle was found."""
+        
         arena_w, arena_h = self.screen.get_size()
+        obstacle_coord = []
 
         for angle_idx in range(self.n_readings):
             angle = math.degrees(self.sensor_angle) + self.start_angle + \
                     angle_idx * self.angle_space
             
-            # Get the position of the extremity of the beam
-            x_fin, y_fin = self.__get_fin_pos(angle)
+            # Get the first point on the line that is not within the body
+            pos_start = self.__get_fin_pos(angle, self.body_radius)
+            
+            # Get the position of the extremity of the ray
+            x_fin, y_fin = self.__get_fin_pos(angle, self.range)
 
-            # Along the line of the beam, check if there is any object 
-            # TODO: find an analytical way to decide from what i should start
-            # as an object shouldn't detect itself 
-            for i in range(5, 100):
+            # Along the line of the ray, check if there is any object 
+            for i in range(0, 100):
                 u = i / 100
 
                 # Get the position on the line
-                x = int((1-u) * x_start + u * x_fin)
-                y = int((1-u) * y_start + u * y_fin)
+                x_line = int((1-u) * pos_start[0] + u * x_fin)
+                y_line = int((1-u) * pos_start[1] + u * y_fin)
 
                 # If the point is still within the screen coordonates
-                if 0 < x < arena_w and 0 < y < arena_h:
+                if 0 < x_line < arena_w and 0 < y_line < arena_h:
                     # Get the color of the point 
-                    color = self.screen.get_at((x, y))
+                    color = self.screen.get_at((x_line, y_line))
                     
                     # If the color is different from the background of the 
                     # screen, then an objstacle was found
                     if (color[0], color[1], color[2]) != constants.COLOR["artichoke"]:
-                        # print("detected object", time.time())
+                        distance = self.__get_dist((x_line, y_line))
+                        obstacle_data = self.__add_noise(distance, angle)
+
+                        # Since an obstacle was found, add it to the list
+                        # Record the position the obstacle was found at 
+                        # and also the current position of the laser
+                        obstacle_coord.append([obstacle_data, self.position])
 
                         break 
-            
-        return False
+        
+        # Return the coordinates of the obstacles or None if there isn't any
+        return obstacle_coord if len(obstacle_coord) > 0 else None
 
-    # TODO: draw this better
     def draw_sensor_angles(self):
         for angle_idx in range(self.n_readings):
             angle = math.degrees(self.sensor_angle) + self.start_angle + \
                     angle_idx * self.angle_space
+            
+            # Get the first point on the line that is not within the body
+            pos_start = self.__get_fin_pos(angle, self.body_radius)
 
-            # Get the position of the extremity of the beam
-            pos_fin = self.__get_fin_pos(angle)
+            # Get the position of the extremity of the ray
+            pos_fin = self.__get_fin_pos(angle, self.range)
 
-            pygame.draw.line(self.screen, (255, 0, 0), self.position, pos_fin, 1)
+            # Draw a red line representing the ray
+            pygame.draw.line(self.screen, (255, 0, 0), pos_start, pos_fin, 1)
+
+    
+    def __add_noise(self, distance, angle):
+        """Return the distance and the angle of the detected object with noise
+        added to the measurement. This noise is simply a random value in the
+        vicinity of the actual measurement."""
+        sigma = np.array([0.5, 0.01])
+
+        mean = np.array([distance, angle])
+        cov = np.diag(sigma ** 2)
+
+        # Get the new measurements with the added noise
+        new_dist, new_angle = np.random.multivariate_normal(mean, cov)
+
+        # Clip to 0 if the values are negative
+        new_dist = max(new_dist, 0)
+        new_angle = max(new_angle, 0)
+
+        return new_dist, new_angle

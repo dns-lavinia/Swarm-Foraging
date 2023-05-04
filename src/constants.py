@@ -1,4 +1,4 @@
-""" This module defines constants that are used throught the project """
+""" This module defines constants that are used throught the project. """
 
 COLOR = {
     "artichoke": (143, 151, 121),
@@ -8,7 +8,7 @@ COLOR = {
     "carmine": (150, 0, 24),
 }
 
-BOARD_SIZE = (500, 500)
+SCREEN_SIZE = (500, 500)
 
 FPS = 50
 ROBOTS_NUMBER = 3

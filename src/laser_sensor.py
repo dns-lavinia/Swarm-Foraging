@@ -4,11 +4,9 @@ import numpy as np
 
 # Local imports
 import constants 
-
-# sigma = uncertainty for distance and angle
-# random value around the 
     
-                 
+# This class was based on the sensor.py module that can be found at:   
+# https://github.com/charleslf2/2D-simulation-of-Simulataneous-Localisation-And-Maping-SLAM-               
 class LaserSensor:
     def __init__(self, range=400, n_readings=13, start_angle=-90, 
                  angle_space=15, position=(0,0), body_angle=0, body_radius=10):

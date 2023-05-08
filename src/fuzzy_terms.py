@@ -2,8 +2,38 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np 
 
-from fuzzylogic.classes import Domain, Set, FuzzyWarning
+from fuzzylogic.classes import Domain, Set, FuzzyWarning, Rule
 from fuzzylogic.functions import triangular, linear
+
+
+class RuleModified(Rule):
+    def __call__(self, args: "dict[Domain, float]", method="cog"):
+        """Calculate the infered value based on different methods.
+        Default is center of gravity (cog).
+        """
+        assert len(args) >= max(
+            len(c) for c in self.conditions.keys()
+        ), "Number of values must correspond to the number of domains defined as conditions!"
+        assert isinstance(args, dict), "Please make sure to pass in the values as a dictionary."
+        if method == "cog":
+            assert (
+                len({C.domain for C in self.conditions.values()}) == 1
+            ), "For CoG, all conditions must have the same target domain."
+            actual_values = {f: f(args[f.domain]) for S in self.conditions.keys() for f in S}
+
+            weights = []
+            for K, v in self.conditions.items():
+                x = min((actual_values[k] for k in K if k in actual_values), default=0)
+                if x > 0:
+                    weights.append((v, x))
+
+            if not weights:
+                return None
+            target_domain = list(self.conditions.values())[0].domain
+            index = sum(v.center_of_gravity * x for v, x in weights) / sum(x for v, x in weights)
+            return (target_domain._high - target_domain._low) / len(
+                target_domain.range
+            ) * index + target_domain._low
 
 
 class DomainModified(Domain):
@@ -94,15 +124,32 @@ def singleton(p, *, no_m=0, c_m=1):
 
 
 def main():
-    #(a)
-    laser_percep = DomainModified("laser perception", 0, 400, res=1)
+    # (a)
+    # (left)
+    left = DomainModified("laser perception", 0, 400, res=1)
 
     # Add the fuzzy set terms
-    laser_percep.left = linear(m=-1.0/55, b=1.0)
-    laser_percep.front = triangular(48, 150, c=100)
-    laser_percep.right = linear(m=1.0/300, b=-1.0/3) 
+    left.near = linear(m=-1.0/55, b=1.0)
+    left.far = triangular(48, 150, c=100)
+    left.emer = linear(m=1.0/300, b=-1.0/3) 
 
-    laser_percep.view()
+    left.view()
+
+    # (right)
+    right = DomainModified("laser perception", 0, 400, res=1)
+
+    # Add the fuzzy set terms
+    right.near = linear(m=-1.0/55, b=1.0)
+    right.far = triangular(48, 150, c=100)
+    right.emer = linear(m=1.0/300, b=-1.0/3) 
+
+    # (front)
+    front = DomainModified("laser perception", 0, 400, res=1)
+
+    # Add the fuzzy set terms
+    front.near = linear(m=-1.0/55, b=1.0)
+    front.far = triangular(48, 150, c=100)
+    front.emer = linear(m=1.0/300, b=-1.0/3) 
 
     # (b)
     dist = DomainModified("distance to goal", 0, 2000, res=5)
@@ -149,7 +196,34 @@ def main():
 
     vtrans.view()
 
+    # Adding the rules for the collision avoidance FLC
+    # Define the rules separately to keep track of what and how it was 
+    # triggered
+    R1 = RuleModified({(left.emer, right.emer, front.emer) : vrot.right})
+    R2 = RuleModified({(left.emer, right.emer, front.far) : vrot.none})
+    R3 = RuleModified({(left.emer, right.far) : vrot.hright})
+    R4 = RuleModified({(right.emer, left.far, front.far) : vrot.hleft})
+    R5 = RuleModified({(left.near, right.far) : vrot.right})
+    R6 = RuleModified({(right.near, left.far) : vrot.left})
+
+    # Define the whole system
+    rules = RuleModified({
+        (left.emer, right.emer, front.emer) : vrot.right,
+        (left.emer, right.emer, front.far) : vrot.none,
+        (left.emer, right.far) : vrot.hright,
+        (right.emer, left.far, front.far) : vrot.hleft,
+        (left.near, right.far) : vrot.right,
+        (right.near, left.far) : vrot.left
+    })
+
+    values = {left: 20, right: 10, front: 300}
+    # Rx = RuleModified({(left.emer, right.far) : vrot.hright})
+    # print(Rx(values))
+    
+    print(R1(values), R2(values), R3(values), R4(values), R5(values), R6(values), "=>", rules(values))
+
+    # Rx = RuleModified({(left.emer, right.emer, front.emer) : vrot.right})
+
 
 if __name__ == "__main__":
     main()
-

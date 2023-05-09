@@ -1,7 +1,9 @@
-from fuzzy import DomainModified, RuleModified, singleton
 from fuzzylogic.functions import triangular, linear
 
-def main():
+from fuzzy import DomainModified, RuleModified, singleton
+from flc import FuzzySystem
+
+def draft():
     # (a)
     # (left)
     left = DomainModified("laser perception", 0, 400, res=1)
@@ -101,6 +103,17 @@ def main():
     print(R1(values), R2(values), R3(values), R4(values), R5(values), R6(values), "=>", rules(values))
 
     # Rx = RuleModified({(left.emer, right.emer, front.emer) : vrot.right})
+
+
+def main():
+    # Based on the LiDAR sensor readings, divide them into three zones, i.e.
+    # left, front and right.
+    # To quantize the information from three angular readings into one, the
+    # closest distance to the object detected from that number of readings would
+    # be considered 
+    sys = FuzzySystem()
+
+    print(sys.flc_avoidance(100, 100, 100))
 
 
 if __name__ == "__main__":

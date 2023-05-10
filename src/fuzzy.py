@@ -2,6 +2,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np 
 
+from fuzzylogic.functions import triangular, linear
 from fuzzylogic.classes import Domain, Set, FuzzyWarning, Rule
 
 class RuleModified(Rule):
@@ -125,3 +126,143 @@ def singleton(p, *, no_m=0, c_m=1):
 
 # Override the method that plots a Set so it looks smoother and better
 Set.plot = plot
+
+class RobotFuzzySystem:
+    def __init__(self):
+        """Initialize all of the terms and sets needed for the system."""
+
+        # Fuzzy sets that represent the perception of the distance for the three
+        # zones (left, front, right)
+
+        # (left)
+        self.left = self.__init_percep_set(name="Laser perception for left zone")
+
+        # (right)
+        self.right = self.__init_percep_set(name="Laser perception for right zone")
+
+        # (front)
+        self.front = self.__init_percep_set(name="Laser perception for front zone")
+
+        # Fuzzy set representing the distance to the goal 
+        self.dist = DomainModified(name="Distance to goal", low=0, high=2000, res=5)
+        self.dist.near = linear(m=-1.0/20, b=1.0)
+        self.dist.med = triangular(low=15, high=125, c=70)
+        self.dist.far = linear(m=1.0/1920, b=-1.0/24)
+
+        # Fuzzy set representing the angle of the robot itself
+        self.ang = DomainModified(name="Angle of robot", low=-3.2, high=3.2, res=0.1)
+        self.ang.farl = linear(m=-1.0/2.8, b=-0.4/2.8)
+        self.ang.medl = triangular(low=-1.2, high=0)
+        self.ang.near = triangular(low=-0.1, high=0.1)
+        self.ang.medr = triangular(low=0, high=1.2)
+        self.ang.farr = linear(m=1.0/2.8, b=-0.4/2.8)
+
+        # Fuzzy set representing the rotational speed
+        self.vrot = DomainModified(name="Rotational speed", low=-2.0, high=2.0, res=0.1)
+        self.vrot.hleft = singleton(-2)
+        self.vrot.left = singleton(-1.5)
+        self.vrot.none = singleton(0.0)
+        self.vrot.right = singleton(1.5)
+        self.vrot.hright = singleton(2)
+
+        # Fuzzy set for the translational speed
+        self.vtrans = DomainModified("Translational speed", low=0, high=100, res=1)
+        self.vtrans.stop = singleton(0) 
+        self.vtrans.low = singleton(20)
+        self.vtrans.medium = singleton(55)
+        self.vtrans.high = singleton(100)
+
+    def __init_percep_set(self, name):
+        """This method should be used for the terms related to zones perception.
+        
+        Args:
+            name (str): The name associated with the newly created domain.
+
+        Returns a `DomainModified` object.
+        """
+
+        percep = DomainModified(name, low=0, high=400, res=1)
+
+        # Add the fuzzy set terms
+        percep.near = linear(m=-1.0/55, b=1.0)
+        percep.far = triangular(low=48, high=150, c=100)
+        percep.emer = linear(m=1.0/300, b=-1.0/3) 
+
+        return percep
+
+    def __get_avoidance_rules(self):
+        """
+        Returns:
+            dict: Rules that are used for the FLC that deals with collision 
+            avoidance.
+        """
+
+        return {
+            (self.left.emer, self.right.emer, self.front.emer) : self.vrot.right,
+            (self.left.emer, self.right.emer, self.front.far) : self.vrot.none,
+            (self.left.emer, self.right.far) : self.vrot.hright,
+            (self.right.emer, self.left.far, self.front.far) : self.vrot.hleft,
+            (self.left.near, self.right.far) : self.vrot.right,
+            (self.right.near, self.left.far) : self.vrot.left
+        }
+    
+    def __get_rendevous_rules_vrot(self):
+        """
+        Returns:
+            dict: Rules that are used for the FLC that deals with the navigation
+            towards the goal having `vrot` as consequent.
+        """
+
+        return {
+            (self.ang.near,) : self.vrot.none,
+            (self.ang.medl,) : self.vrot.right,
+            (self.ang.medr,) : self.vrot.left,
+            (self.ang.farl,) : self.vrot.hright,
+            (self.ang.farr,) : self.vrot.hleft,
+        }
+
+    def __get_rendevous_rules_vtrans(self):
+        """
+        Returns:
+            dict: Rules that are used for the FLC that deals with the navigation
+            towards the goal having `vtrans` as consequent.
+        """
+
+        return {
+            (self.dist.far,) : self.vtrans.high,
+            (self.dist.med,) : self.vtrans.medium,
+            (self.dist.near,) : self.vtrans.stop,
+            (self.front.emer,) : self.vtrans.medium,
+            (self.front.near,) : self.vtrans.medium 
+        }
+    
+    def flc_combined(self, inp_left, inp_front, inp_right, inp_ang, inp_dist):
+        """Fuzzy logic controller that combines the rendevous and avoidance FLCs.
+        
+        Returns:
+            [float, float]: List containing the defuzzified values for vrot (the
+            rotational speed) and for vtrans (translational speed) in this order."""
+
+        input_data = {
+            self.left: inp_left,
+            self.front: inp_front,
+            self.right: inp_right,
+            self.ang: inp_ang,
+            self.dist: inp_dist
+        }
+
+        rendevous_rules_vrot = self.__get_rendevous_rules_vrot()
+        rendevous_rules_vtrans = self.__get_rendevous_rules_vtrans()
+        avoidance_rules = {}
+
+        # Save in the new dict the avoidance rules with extended constraints
+        for antecedents, consequent in self.__get_avoidance_rules().items():
+            rule_updated = antecedents + (self.dist.far, self.dist.med,)
+            avoidance_rules[rule_updated] = consequent
+        
+        rules_vtrans = RuleModified(rendevous_rules_vrot) | RuleModified(avoidance_rules)
+        rules_vrot = RuleModified(rendevous_rules_vtrans)
+
+        # Returned the defuzzified results separate for vtrans and vrot
+        return rules_vtrans(input_data, method="takagi-sugeno"), \
+               rules_vrot(input_data, method="tagaki-sugeno")

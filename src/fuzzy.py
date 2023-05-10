@@ -15,7 +15,12 @@ class RuleModified(Rule):
         This is a reimplementation of the original method that gives more 
         flexibility to a rule and accepts other methods for computing the infered
         value.
+
+        Args:
+            method(str): The method that is used for defuzzification. Accepted 
+            inputs are `'cog'` or `'takagi-sugeno-0'`. Defaults to `'cog'`.
         """
+
         assert len(args) >= max(
             len(c) for c in self.conditions.keys()
         ), "Number of values must correspond to the number of domains defined as conditions!"
@@ -41,9 +46,61 @@ class RuleModified(Rule):
             return (target_domain._high - target_domain._low) / len(
                 target_domain.range
             ) * index + target_domain._low
+        
+        elif method == "tagaki-sugeno-0":
+            # The Takagi-Sugeno weighted average is used as a deffuzification
+            # method in this case, with the default value of 0, being a 
+            # zero-order fuzzy model since the rule's consequent is a fuzzy
+            # singleton
+
+            assert (
+                len({C.domain for C in self.conditions.values()}) == 1
+            ), "For Takagi-Sugeno, all conditions must have the same target domain."
+
+            # Given the input, store in a dict for each fuzzy term the value
+            # of the membership function computed from the given input
+            # 
+            # f = Fuzzy term (e.g. dist.med, temp.high etc.)
+            # f(args[f.domain]) membership value for the fuzzy term given an input
+            # where the input is args[f.domain]
+            actual_values = {f: f(args[f.domain]) for S in self.conditions.keys() for f in S}
+
+            # Compute the weights 
+            weights = []
+
+            # For all of the terms of a fuzzy set
+            for K, v in self.conditions.items():
+                # For each fuzzy term k, if it is in the rule antecedents, store
+                # its value in a list and get the minimum of them at the end
+                x = min((actual_values[k] for k in K if k in actual_values), default=0)
+
+                # If x is nonzero, then the fuzzy term is activated
+                if x > 0:
+                    # Compute the rule output level 
+                    z = [x for x in v.domain.range if v.func(x) == 1][0]
+
+                    if z is None:
+                        raise FuzzyWarning("Singleton function not properly implemented.") 
+
+                    # Append a tuple of the form (fuzzy term, x, z)
+                    weights.append((v, x, z))
+            
+            # If nothing was activated, return None
+            if not weights:
+                return None 
+            
+            # Get the domain of the consequent
+            target_domain = list(self.conditions.values())[0].domain
+            output = sum(z * x for _, x, z in weights) / sum(x for _, x, _ in weights)
+
+            return output
+            
+            # return (target_domain._high - target_domain._low) / len(
+            #     target_domain.range
+            # ) * index + target_domain._low
+            
         else:
-            #TODO: implement the case in which the method is not cog
-            pass
+            raise FuzzyWarning(f'Unknown method for defuzzification: {method}.')
 
 
 class DomainModified(Domain):
@@ -118,6 +175,7 @@ def singleton(p, *, no_m=0, c_m=1):
     would always return false. Thus, for comparation purposes, `math.isclose()` 
     was used instead.
     """
+
     assert 0 <= no_m < c_m <= 1
 
     def f(x):
@@ -260,9 +318,9 @@ class RobotFuzzySystem:
             rule_updated = antecedents + (self.dist.far, self.dist.med,)
             avoidance_rules[rule_updated] = consequent
         
-        rules_vtrans = RuleModified(rendevous_rules_vrot) | RuleModified(avoidance_rules)
-        rules_vrot = RuleModified(rendevous_rules_vtrans)
+        rules_vrot = RuleModified((rendevous_rules_vrot | avoidance_rules))
+        rules_vtrans = RuleModified(rendevous_rules_vtrans)
 
         # Returned the defuzzified results separate for vtrans and vrot
-        return rules_vtrans(input_data, method="takagi-sugeno"), \
-               rules_vrot(input_data, method="tagaki-sugeno")
+        return rules_vrot(input_data, method="tagaki-sugeno-0"), \
+               rules_vtrans(input_data, method="tagaki-sugeno-0")

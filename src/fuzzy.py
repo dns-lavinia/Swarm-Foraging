@@ -19,6 +19,9 @@ class RuleModified(Rule):
         Args:
             method(str): The method that is used for defuzzification. Accepted 
             inputs are `'cog'` or `'takagi-sugeno-0'`. Defaults to `'cog'`.
+
+            `'takagi-sugeno-0'` means a zero order Sugeno system
+
         """
 
         assert len(args) >= max(
@@ -43,6 +46,7 @@ class RuleModified(Rule):
                 return None
             target_domain = list(self.conditions.values())[0].domain
             index = sum(v.center_of_gravity * x for v, x in weights) / sum(x for v, x in weights)
+
             return (target_domain._high - target_domain._low) / len(
                 target_domain.range
             ) * index + target_domain._low
@@ -94,10 +98,6 @@ class RuleModified(Rule):
             output = sum(z * x for _, x, z in weights) / sum(x for _, x, _ in weights)
 
             return output
-            
-            # return (target_domain._high - target_domain._low) / len(
-            #     target_domain.range
-            # ) * index + target_domain._low
             
         else:
             raise FuzzyWarning(f'Unknown method for defuzzification: {method}.')

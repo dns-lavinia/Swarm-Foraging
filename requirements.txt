@@ -1,2 +1,5 @@
+fuzzylogic==1.2.0
+matplotlib==3.7.1
+numpy==1.24.3
 pygame==2.4.0
 pymunk==6.4.0

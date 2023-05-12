@@ -126,9 +126,13 @@ class Simulation:
         self.space.add(body, shape)
         return shape
 
-    def __add_boundary(self):
+    def __add_boundary(self, color=constants.COLOR["black"]):
         """Initialize and add to the simulation a boundary around the visible
-        environment."""
+        environment.
+        
+        Args:
+            color ((int, int, int, int)): The color of the boundary box.
+        """
 
         static_body = self.space.static_body
         max_w, max_h = self.screen_size
@@ -136,19 +140,19 @@ class Simulation:
         left_segm = pymunk.Segment(static_body, a=(0, 0), b=(0, max_h), radius=1.0)
         self.space.add(left_segm)
         left_segm.friction = 1
-        left_segm.color = (0, 0, 0, 0)
+        left_segm.color = color
 
         right_segm = pymunk.Segment(static_body, a=(max_w-2, 0), b=(max_w-2, max_h-2), radius=1.0)
         self.space.add(right_segm)
         right_segm.friction = 1
-        right_segm.color = (0, 0, 0, 0)
+        right_segm.color = color
 
         up_semg = pymunk.Segment(static_body, a=(0, 0), b=(max_w, 0), radius=1.0)
         self.space.add(up_semg)
         up_semg.friction = 1
-        up_semg.color = (0, 0, 0, 0)
+        up_semg.color = color
 
         down_segm = pymunk.Segment(static_body, a=(0, max_h-2), b=(max_w-2, max_h-2), radius=1.0)
         self.space.add(down_segm)
         down_segm.friction = 1
-        down_segm.color = (0, 0, 0, 0)
+        down_segm.color = color

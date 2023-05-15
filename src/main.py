@@ -12,15 +12,21 @@ from sim import Simulation
 random.seed(1)
 
 
+def create_nn():
+    # CMA-ES pop_size = 8, sigma_init = 0.1
+    # beta = 60
+    # episodes = max 700 simulation step (for them an episode ~ 8 min)
+    # each behavior simulated 3 times 
+    # => each iteration = execution of 24 episodes and a max of 16800 sim steps
+    return
+
+
 def main():   
     sim = Simulation()
 
     target = sim.add_target()
-    homebase = sim.add_homebase()
-    robots = sim.add_robots(start_pos=homebase.body.position)
-
-    # Save the center of the homebase to draw a circle around this area
-    homebase_center = int(homebase.body.position.x) + 10, int(homebase.body.position.y)
+    goal_x, goal_y = sim.get_homebase_pos()
+    robots = sim.add_robots(start_pos=(goal_x, goal_y))
 
     # Simulation loop
     while True:
@@ -33,16 +39,14 @@ def main():
 
         # Advance the simulation with one step
         sim.space.step(1/constants.FPS) 
-        
+
         # Make the background green
         sim.screen.fill(constants.COLOR["artichoke"])
 
-        # Draw area around the homebase
-        pygame.draw.circle(surface=sim.screen, 
-                           color=constants.COLOR["carmine"], 
-                           center=homebase_center, 
-                           radius=25, 
-                           width=1)
+        # Draw the homebase flag                            
+        pygame.draw.polygon(surface=sim.screen, 
+                            color=constants.COLOR["auburn"], 
+                            points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
 
         sim.space.debug_draw(sim.draw_options)
 

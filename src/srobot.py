@@ -11,7 +11,7 @@ from laser_sensor import LaserSensor
 # Have the same results with every run of the simulation
 random.seed(1)
 
-   
+
 def random_sign():
     return 1 if random.randint(0, 2) < 1 else -1
 

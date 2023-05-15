@@ -100,14 +100,8 @@ class Simulation:
 
         return shape
     
-    def add_homebase(self, position=None):
-        """Create and add to the space the homebase flag.
-        
-        The homebase will be added at the bottom left corner of the surface if
-        the position is not specified."""
-
-        flag_sizes = [(25, 0), (0, 7), (0, -7)]
-        body = pymunk.Body(body_type=pymunk.Body.STATIC)
+    def get_homebase_pos(self, position=None):
+        """Returns the coordonates of the homebase (x, y)."""
 
         # Add the hombase in the lower left corner 
         # if the position is not given
@@ -118,13 +112,7 @@ class Simulation:
         else:
             x, y = position
 
-        body.position = x, y 
-        
-        shape = pymunk.Poly(body, flag_sizes)
-        shape.color = constants.COLOR["auburn"]
-        
-        self.space.add(body, shape)
-        return shape
+        return x, y
 
     def __add_boundary(self, color=constants.COLOR["black"]):
         """Initialize and add to the simulation a boundary around the visible

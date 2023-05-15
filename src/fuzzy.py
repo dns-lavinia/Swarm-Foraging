@@ -130,6 +130,7 @@ class DomainModified(Domain):
 
         self._fig.show()
 
+
 def plot(set_obj):
     """Plot a Set only as much as it is needed (does not plot all of the values
     for which the membership function is 0).
@@ -182,8 +183,10 @@ def singleton(p, *, no_m=0, c_m=1):
         return c_m if math.isclose(x, p, abs_tol=1e-9) else no_m
     return f
 
+
 # Override the method that plots a Set so it looks smoother and better
 Set.plot = plot
+
 
 class RobotFuzzySystem:
     def __init__(self):

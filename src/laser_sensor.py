@@ -151,7 +151,6 @@ class LaserSensor:
 
             # Draw a red line representing the ray
             pygame.draw.line(self.screen, (255, 0, 0), pos_start, pos_fin, 1)
-
     
     def __add_noise(self, distance, angle):
         """Return the distance and the angle of the detected object with noise

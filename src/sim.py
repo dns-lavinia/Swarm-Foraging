@@ -58,50 +58,76 @@ class Simulation:
         for shape in self.space.shapes:
             self.space.remove(shape)
 
+        # Add the target again
+        self.target = self.add_target()
+
         # Add the robots again
         self.swarm = SwarmController(start_pos=self.goal_pos, 
                                      start_angle=(-math.pi / 2),
                                      sim_space=self.space)
 
-        # Add the target again
-        self.target = self.add_target()
-
-    def step(self):
-        return None
-
-    def __get_swarm_target_dist(self):
-        target_pos = self.target.body.position
-        dist = []
-
-        for i in range(len(self.robots)):
-            # Get the position of the robot
-            srobot_pos = self.robots[i].body.position
-
-            # Get the distance between them
-            dist.append(math.sqrt((target_pos[0] - srobot_pos[0]) ** 2 \
-                             + (target_pos[1] - srobot_pos[1]) ** 2))
-
-        assert (len(dist) > 0), "Could not compute any distance from the target to any robot."
+    def step(self, action):
+        """Advance the simulation one step given an action.
         
-        return min(dist)
-    
-    def get_reward(self):
-        # TODO: finish implementing this 
+        Args:
+            action (str): Can be one of the three options: `'tras'`, `'rot'`, `'sca'`.
+        """
+
+        assert (action == "tras" or action == "rot" or action == "sca"), \
+                "[Simulation.step] Given action is not recognized"
+
+        new_state = None 
+        last_pos = self.swarm.position  # Save the last position of the swarm 
+        last_target = self.target.body.position  # Save the last position of the target
+
+        # Perform the given action
+        self.swarm.perform_action(action)
+
+        # Compute the reward
+        reward = self.__get_reward(last_pos, self.swarm.position, last_target)
+
+        # Check if the swarm managed to bring the target food object into the nest
+        done = True if self.target.point_query(self.goal_pos) else False 
+
+        return new_state, reward, done
+
+    def __get_dist(self, pos1, pos2):
+        """Based on 2 points in the simulation, get the distance between them."""
+
+        return math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2)
+
+    def __get_reward(self, last_pos, pos, last_target):
+        """
+        Args:
+            last_pos ((int, int)): The previous position of the swarm.
+            pos ((int, int)): The current position of the swarm.
+
+        Returns:
+            int: Value of the reward
+        """
 
         # If box is in goal
         if self.target.point_query(self.goal_pos):
             return 100
         
-        dist = self.__get_swarm_target_dist()
+        dist_to_goal = self.__get_dist(self.swarm.position, self.target.body.position)
+
+        if dist_to_goal > constants.SWARM_BOX_NEAR:
+            # Check wether the swarm got closer to the target
+            dist_last = self.__get_dist(last_pos, self.target.body.position)
+            dist = self.__get_dist(pos, self.target.body.position)
+
+            if (dist_last - dist) > 0.0001:
+                return 1
         
-        # if (dist > constants.SWARM_BOX_NEAR \
-        #     and ):
-        #     return 1
+        else:
+            # Check wether the food object got closer to the goal
+            dist_last = self.__get_dist(last_target, self.goal_pos)
+            dist = self.__get_dist(self.target.body.position, self.goal_pos)
 
-
-        # elif (dist <= constants.SWARM_BOX_NEAR \
-        #       and ):
-        #     return 5
+            if (dist_last - dist) > 0.0001:
+                return 1
+            return 5
         
         # If none of the conditions above are met, then the reward is -1
         return -1

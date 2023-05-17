@@ -7,6 +7,7 @@ from pymunk.vec2d import Vec2d
 import constants
 
 from laser_sensor import LaserSensor
+from fuzzy import RobotFuzzySystem
 
 # Have the same results with every run of the simulation
 random.seed(1)
@@ -22,14 +23,20 @@ class SRobot:
 
     def __init__(self, space, start_pos):
         # Create the robot in the vicinity of the starting point
-        x = start_pos[0] + random_sign() * random.randint(20, 40)
-        y = start_pos[1] + random_sign() * random.randint(20, 40)
+        x = start_pos[0] 
+        y = start_pos[1] 
 
         # Create the body of the robot
         self.body = self.__add_robot_body(space, position=(x, y))
 
         # Attach a LaserSensor to it
         self.sensor = LaserSensor(position=(x, y), body_angle=self.body.angle)
+
+        # Attach the fuzzy controller to it
+        # FIXME: Upon adding the fuzzy system, I get a runtime warning from
+        # matlplotlib stating there are too many figures open at once (more than
+        # 20)
+        # self.flc = RobotFuzzySystem()
     
     # TODO: this function will be changed accordingly when RL will be added
     # source: https://github.com/viblo/pymunk/blob/master/pymunk/examples/tank.py 
@@ -44,18 +51,18 @@ class SRobot:
         turn = self.body.rotation_vector.cpvunrotate(target_delta).angle 
         self.body.angle = self.body.angle - turn
 
-        # Drive the robot towards the target object
-        if (target_pos - self.body.position).get_length_sqrd() < 30 ** 2:
-            # If the robot is close enough to the target object, stop
-            self.body.velocity = 0, 0
-        else:
-            if target_delta.dot(self.body.rotation_vector) > 0.0:
-                direction = 1.0
-            else:
-                direction = -1.0
+        # # Drive the robot towards the target object
+        # if (target_pos - self.body.position).get_length_sqrd() < 30 ** 2:
+        #     # If the robot is close enough to the target object, stop
+        #     self.body.velocity = 0, 0
+        # else:
+        #     if target_delta.dot(self.body.rotation_vector) > 0.0:
+        #         direction = 1.0
+        #     else:
+        #         direction = -1.0
 
-            dv = Vec2d(30.0 * direction, 0.0)
-            self.body.velocity = self.body.rotation_vector.cpvrotate(dv)
+        #     dv = Vec2d(30.0 * direction, 0.0)
+        #     self.body.velocity = self.body.rotation_vector.cpvrotate(dv)
 
         space.step(dt)
 

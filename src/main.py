@@ -1,3 +1,5 @@
+import os 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import sys 
 import random
 
@@ -12,21 +14,12 @@ from sim import Simulation
 random.seed(1)
 
 
-def create_nn():
-    # CMA-ES pop_size = 8, sigma_init = 0.1
-    # beta = 60
-    # episodes = max 700 simulation step (for them an episode ~ 8 min)
-    # each behavior simulated 3 times 
-    # => each iteration = execution of 24 episodes and a max of 16800 sim steps
-    return
-
 
 def main():   
     sim = Simulation()
+    sim.reset()
 
-    target = sim.add_target()
     goal_x, goal_y = sim.get_homebase_pos()
-    robots = sim.add_robots(start_pos=(goal_x, goal_y))
 
     # Simulation loop
     while True:
@@ -49,10 +42,6 @@ def main():
                             points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
 
         sim.space.debug_draw(sim.draw_options)
-
-        for i in range(constants.ROBOTS_NUMBER):
-            robots[i].update(sim.space, 1 / constants.FPS, target.body.position)
-            robots[i].sensor.draw_sensor_angles()
 
         pygame.display.flip()
         sim.clock.tick(constants.FPS)

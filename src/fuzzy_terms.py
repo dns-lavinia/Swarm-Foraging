@@ -8,7 +8,7 @@ def main():
     # be considered 
     sys = RobotFuzzySystem()
 
-    print(sys.flc_combined(100, 102, 103, 500, -2))
+    print(sys.evaluate(100, 102, 103, 500, -2))
 
 
 if __name__ == "__main__":

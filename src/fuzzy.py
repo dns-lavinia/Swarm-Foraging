@@ -297,7 +297,7 @@ class RobotFuzzySystem:
             (self.front.near,) : self.vtrans.medium 
         }
     
-    def flc_combined(self, inp_left, inp_front, inp_right, inp_ang, inp_dist):
+    def evaluate(self, inp_left, inp_front, inp_right, inp_ang, inp_dist):
         """Fuzzy logic controller that combines the rendevous and avoidance FLCs.
         
         Returns:

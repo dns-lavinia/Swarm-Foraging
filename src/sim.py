@@ -1,4 +1,5 @@
 import random
+import math
 
 import pygame
 import pymunk
@@ -8,9 +9,12 @@ import pymunk.pygame_util
 import constants
 
 from srobot import SRobot
-
+from swarm import SwarmController
 
 class Simulation:
+    OBSERVATION_SPACE_N = 6
+    ACTION_SPACE_N = 3
+
     def __init__(self, screen_size=constants.SCREEN_SIZE):
         """Initialize the simulation.
 
@@ -43,7 +47,65 @@ class Simulation:
         # Add a box around the environment so that objects cannot move past the
         # visible screen
         self.__add_boundary()
+
+        # Add the homebase 
+        self.goal_pos = self.get_homebase_pos()
     
+    def reset(self):
+        """On reset, the robots and the target are placed in the starting positions."""
+        
+        # Remove all bodies from the space
+        for shape in self.space.shapes:
+            self.space.remove(shape)
+
+        # Add the robots again
+        self.swarm = SwarmController(start_pos=self.goal_pos, 
+                                     start_angle=(-math.pi / 2),
+                                     sim_space=self.space)
+
+        # Add the target again
+        self.target = self.add_target()
+
+    def step(self):
+        return None
+
+    def __get_swarm_target_dist(self):
+        target_pos = self.target.body.position
+        dist = []
+
+        for i in range(len(self.robots)):
+            # Get the position of the robot
+            srobot_pos = self.robots[i].body.position
+
+            # Get the distance between them
+            dist.append(math.sqrt((target_pos[0] - srobot_pos[0]) ** 2 \
+                             + (target_pos[1] - srobot_pos[1]) ** 2))
+
+        assert (len(dist) > 0), "Could not compute any distance from the target to any robot."
+        
+        return min(dist)
+    
+    def get_reward(self):
+        # TODO: finish implementing this 
+
+        # If box is in goal
+        if self.target.point_query(self.goal_pos):
+            return 100
+        
+        dist = self.__get_swarm_target_dist()
+        
+        # if (dist > constants.SWARM_BOX_NEAR \
+        #     and ):
+        #     return 1
+
+
+        # elif (dist <= constants.SWARM_BOX_NEAR \
+        #       and ):
+        #     return 5
+        
+        # If none of the conditions above are met, then the reward is -1
+        return -1
+
     def add_robots(self, start_pos, n_robots=constants.ROBOTS_NUMBER):
         """Add a number of robots to the simulation.
 

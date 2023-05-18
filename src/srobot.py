@@ -1,4 +1,5 @@
 import random
+import math
 import pymunk
 
 from pymunk.vec2d import Vec2d
@@ -21,7 +22,13 @@ class SRobot:
     MASS = 0.65  # kg
     RADIUS = 10  # cm
 
-    def __init__(self, space, start_pos):
+    def __init__(self, space, start_pos, goal_pos):
+        # Save the space the robots are going to be placed in
+        self.space = space
+
+        # All of the robots know the goal or the nest position
+        self.goal_pos = goal_pos
+
         # Create the robot in the vicinity of the starting point
         x = start_pos[0] 
         y = start_pos[1] 
@@ -33,38 +40,31 @@ class SRobot:
         self.sensor = LaserSensor(position=(x, y), body_angle=self.body.angle)
 
         # Attach the fuzzy controller to it
-        # FIXME: Upon adding the fuzzy system, I get a runtime warning from
-        # matlplotlib stating there are too many figures open at once (more than
-        # 20)
-        # self.flc = RobotFuzzySystem()
-    
-    # TODO: this function will be changed accordingly when RL will be added
-    # source: https://github.com/viblo/pymunk/blob/master/pymunk/examples/tank.py 
-    def update(self, space, dt, target_pos):
-        """Update the position of the robot."""
+        self.flc = RobotFuzzySystem()
 
-        # Based on the reading the robot gets from the sensor, update the 
-        # position -> this would be one of the FLCs
-        self.sensor.get_reading()
+        # Add vtras and vrot variables 
+        self.vtras = 0
+        self.vrot = 0
+
+    def update_vtras(self, vtras, angle):
+        self.body.velocity = vtras 
+        self.body.angle = angle
         
-        target_delta = target_pos - self.body.position
-        turn = self.body.rotation_vector.cpvunrotate(target_delta).angle 
-        self.body.angle = self.body.angle - turn
+        self.vtras = vtras
+        self.vrot = 0
 
-        # # Drive the robot towards the target object
-        # if (target_pos - self.body.position).get_length_sqrd() < 30 ** 2:
-        #     # If the robot is close enough to the target object, stop
-        #     self.body.velocity = 0, 0
-        # else:
-        #     if target_delta.dot(self.body.rotation_vector) > 0.0:
-        #         direction = 1.0
-        #     else:
-        #         direction = -1.0
+        # Make the movement
+        self.space.step(constants.FPS)
 
-        #     dv = Vec2d(30.0 * direction, 0.0)
-        #     self.body.velocity = self.body.rotation_vector.cpvrotate(dv)
+        # Update the position of the sensor
+        self.sensor.update_position(self.body.position, self.body.angle)  
 
-        space.step(dt)
+    def update_vrot(self, vrot):
+        self.body.velocity = self.vtras 
+        self.body.angular_velocity = vrot  # in radians
+
+        # Make the movement
+        self.space.step(constants.FPS)
 
         # Update the position of the sensor
         self.sensor.update_position(self.body.position, self.body.angle)  
@@ -88,3 +88,34 @@ class SRobot:
         space.add(body, shape)
 
         return body
+    
+    def get_velocities(self):
+        """
+        Returns:
+            (float, float): Returns translational and roational velocities (in
+            this order) once they are computed by the FLC.
+        """
+        distances = self.sensor.get_reading()
+        n = len(distances)
+
+        # Get the minimum distance for readings of the left zone
+        left_dist = min(distances[0 : (n / 3)])
+
+        # Get the minimum distance for readings of the front zone
+        front_dist = min(distances[(n / 3) : (2 * n / 3 + n%3)])
+
+        # Get the minimum distance for readings of the right zone
+        right_dist = min(distances[(2 * n / 3 + n%3) : n])
+
+        # Compute the distance to goal from the robot
+        dist = math.sqrt((self.body.position[0] - self.goal_pos[0]) ** 2  
+                         + (self.body.position[1] - self.goal_pos[1]) ** 2)
+        
+        # Save the new velocities
+        self.vtras, self.vrot = self.flc.evaluate(inp_left=left_dist,
+                                                  inp_front=front_dist,
+                                                  inp_right=right_dist,
+                                                  inp_ang=self.body.angle,
+                                                  inp_dist=dist)
+        
+        return self.vtras, self.vrot

@@ -107,16 +107,9 @@ class DomainModified(Domain):
     """Extends the `Domain` class by adding a new way to plot all of the Sets
     that are part of the Domain better."""
 
-    __slots__ = ["_name", "_low", "_high", "_res", "_sets", "_fig"]
-
-    def __init__(self, name, low, high, *, res=1, sets: dict = None):
-        super(DomainModified, self).__init__(name, low, high, res=res, sets=sets)
-
-        # Use a figure instead of a normal plot
-        self._fig = plt.figure()
-
     def view(self):
         """Plot all of the terms in the set."""
+        fig = plt.figure()
 
         for s in self._sets.values():
             s.plot()
@@ -128,7 +121,7 @@ class DomainModified(Domain):
         # Show the fuzzy terms names
         leg = plt.legend(loc='lower right')
 
-        self._fig.show()
+        fig.show()
 
 
 def plot(set_obj):

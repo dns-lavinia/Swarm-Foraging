@@ -25,7 +25,7 @@ class LaserSensor:
             angle_space  (int, optional): The space in degrees between the 
             angular readings. Defaults to 15 (degrees).
 
-            position  (int, optional): The position where the LaserSensor is 
+            position  ((int, int), optional): The position where the LaserSensor is 
             placed on in the pymunk space.
 
             body_angle  (int, optional): The orientation of the body that is 
@@ -93,11 +93,10 @@ class LaserSensor:
         """Perform all of the angular readings along the sensor's axis and check 
         if an object was found.
         
-        Returns a list containing the coordinates of obsticales or None if no
-        obstacle was found."""
+        Returns a list containing all angular readings."""
         
         arena_w, arena_h = self.screen.get_size()
-        obstacle_coord = []
+        readings = []
 
         for angle_idx in range(self.n_readings):
             angle = math.degrees(self.sensor_angle) + self.start_angle + \
@@ -108,6 +107,9 @@ class LaserSensor:
             
             # Get the position of the extremity of the ray
             x_fin, y_fin = self.__get_fin_pos(angle, self.range)
+
+            # Flag used to check if an object was found for every reading
+            found_object = False
 
             # Along the line of the ray, check if there is any object 
             for i in range(0, 100):
@@ -125,18 +127,26 @@ class LaserSensor:
                     # If the color is different from the background of the 
                     # screen, then an objstacle was found
                     if (color[0], color[1], color[2]) != constants.COLOR["artichoke"]:
+                        found_object = True
+
                         distance = self.__get_dist((x_line, y_line))
                         obstacle_data = self.__add_noise(distance, angle)
 
                         # Since an obstacle was found, add it to the list
                         # Record the position the obstacle was found at 
                         # and also the current position of the laser
-                        obstacle_coord.append([obstacle_data, self.position])
-
+                        readings.insert(angle_idx, obstacle_data[0])
+                        
                         break 
+            
+            if not found_object:
+                distance = self.__get_dist((x_fin, y_fin))
+                data = self.__add_noise(distance, angle)
+
+                readings.insert(angle_idx, data[0])
         
         # Return the coordinates of the obstacles or None if there isn't any
-        return obstacle_coord if len(obstacle_coord) > 0 else None
+        return readings if len(readings) > 0 else None
 
     def draw_sensor_angles(self):
         for angle_idx in range(self.n_readings):

@@ -64,7 +64,8 @@ class Simulation:
         # Add the robots again
         self.swarm = SwarmController(start_pos=self.goal_pos, 
                                      start_angle=(-math.pi / 2),
-                                     sim_space=self.space)
+                                     sim_space=self.space,
+                                     goal_pos=self.goal_pos)
 
     def step(self, action):
         """Advance the simulation one step given an action.

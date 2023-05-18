@@ -2,7 +2,6 @@ import math
 
 # Local imports
 from srobot import SRobot
-from fuzzy import RobotFuzzySystem
 
 
 class SwarmController:
@@ -10,8 +9,9 @@ class SwarmController:
     U_SHAPE_ALPHA = (math.pi / 5) * 2
     SWARM_SIZE = 3
 
-    def __init__(self, start_pos, start_angle, sim_space, *, swarm_size=SWARM_SIZE):
+    def __init__(self, start_pos, start_angle, sim_space, goal_pos, *, swarm_size=SWARM_SIZE):
         self.space = sim_space
+        self.goal_pos = goal_pos
 
         self.swarm_size = swarm_size
         self.position = start_pos
@@ -37,21 +37,30 @@ class SwarmController:
         # Get the average translational and rotational speed of the robots
         sum_vtras = 0
         sum_vrot = 0
+        n = len(self.robots)
 
-        # for i in range(len(self.robots)):
-        #     vtras, vrot = self.robots[i].
+        for i in range(len(self.robots)):
+            vtras, vrot = self.robots[i].get_velocities()
+
+            sum_vtras += vtras
+            sum_vrot += vrot
+
+        avg_vtras = sum_vtras / n
+        avg_vrot = sum_vrot / n
         
         if action == "tras":
-            # Move the swarm
-            pass
+            # Move the swarm 
+            for i in range(n):
+                self.robots[i].update_vtras(avg_vtras)
             
         elif action == "rot":
             # Rotate the swarm
-            pass 
+            for i in range(n):
+                self.robots[i].update_vrot(avg_vrot)
 
         elif action == "sca":
             # Scale the swarm
-            pass 
+            print("Scaling the swarm. Oops, action not implemented")
         
 
     def __add_robots(self):
@@ -61,7 +70,9 @@ class SwarmController:
             # Get the position of the robot in the formation
             pos = self.__get_robot_pos(angle=(i * self.b_angle))
 
-            robots.append(SRobot(self.space, start_pos=pos))
+            robots.append(SRobot(space=self.space, 
+                                 start_pos=pos,
+                                 goal_pos=self.goal_pos))
         
         return robots
     

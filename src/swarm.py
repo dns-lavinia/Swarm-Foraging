@@ -1,6 +1,8 @@
 import math
 
 # Local imports
+import constants
+
 from srobot import SRobot
 
 
@@ -28,10 +30,11 @@ class SwarmController:
         """Perform an action.
         
         Args:
-            action (str): Can be one of the three options: `'tras'`, `'rot'`, `'sca'`.
+            action (int): Can be one of the three options: 0 = tras, 1 = rot, 
+            3 = sca.
         """
         
-        assert (action == "tras" or action == "rot" or action == "sca"), \
+        assert (action in [0, 1, 2]), \
                 "[Simulation.step] Given action is not recognized"
         
         # Get the average translational and rotational speed of the robots
@@ -48,17 +51,22 @@ class SwarmController:
         avg_vtras = sum_vtras / n
         avg_vrot = sum_vrot / n
         
-        if action == "tras":
+        # Move the swarm linearly
+        if action == 0:
             # Move the swarm 
             for i in range(n):
-                self.robots[i].update_vtras(avg_vtras)
-            
-        elif action == "rot":
+                self.robots[i].update_vtras(avg_vtras, self.angle)
+        
+        # Rotate the swarm
+        elif action == 1:
             # Rotate the swarm
             for i in range(n):
                 self.robots[i].update_vrot(avg_vrot)
 
-        elif action == "sca":
+            # update the angle 
+            self.angle = self.angle + avg_vrot / constants.FPS 
+
+        elif action == 2:
             # Scale the swarm
             print("Scaling the swarm. Oops, action not implemented")
         

@@ -47,24 +47,24 @@ class SRobot:
         self.vrot = 0
 
     def update_vtras(self, vtras, angle):
-        self.body.velocity = vtras 
+        self.body.velocity = (vtras, 0) 
         self.body.angle = angle
         
         self.vtras = vtras
         self.vrot = 0
 
         # Make the movement
-        self.space.step(constants.FPS)
+        self.space.step(1 / constants.FPS)
 
         # Update the position of the sensor
         self.sensor.update_position(self.body.position, self.body.angle)  
 
     def update_vrot(self, vrot):
-        self.body.velocity = self.vtras 
+        self.body.velocity = (self.vtras, 0) 
         self.body.angular_velocity = vrot  # in radians
 
         # Make the movement
-        self.space.step(constants.FPS)
+        self.space.step(1 / constants.FPS)
 
         # Update the position of the sensor
         self.sensor.update_position(self.body.position, self.body.angle)  
@@ -99,13 +99,13 @@ class SRobot:
         n = len(distances)
 
         # Get the minimum distance for readings of the left zone
-        left_dist = min(distances[0 : (n / 3)])
+        left_dist = min(distances[0 : (n // 3)])
 
         # Get the minimum distance for readings of the front zone
-        front_dist = min(distances[(n / 3) : (2 * n / 3 + n%3)])
+        front_dist = min(distances[(n // 3) : (2 * n // 3 + n%3)])
 
         # Get the minimum distance for readings of the right zone
-        right_dist = min(distances[(2 * n / 3 + n%3) : n])
+        right_dist = min(distances[(2 * n // 3 + n%3) : n])
 
         # Compute the distance to goal from the robot
         dist = math.sqrt((self.body.position[0] - self.goal_pos[0]) ** 2  

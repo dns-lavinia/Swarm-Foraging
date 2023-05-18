@@ -66,18 +66,22 @@ class Simulation:
                                      start_angle=(-math.pi / 2),
                                      sim_space=self.space,
                                      goal_pos=self.goal_pos)
+        
+        return [self.target.body.position[0], self.target.body.position[1],
+                self.goal_pos[0], self.goal_pos[1],
+                self.swarm.angle, self.swarm.f_sca]
 
     def step(self, action):
         """Advance the simulation one step given an action.
         
         Args:
-            action (str): Can be one of the three options: `'tras'`, `'rot'`, `'sca'`.
+            action (int): Can be one of the three options: 0 = tras, 1 = rot, 
+            3 = sca.
         """
 
-        assert (action == "tras" or action == "rot" or action == "sca"), \
+        assert (action in [0, 1, 2]), \
                 "[Simulation.step] Given action is not recognized"
 
-        new_state = None 
         last_pos = self.swarm.position  # Save the last position of the swarm 
         last_target = self.target.body.position  # Save the last position of the target
 
@@ -88,7 +92,11 @@ class Simulation:
         reward = self.__get_reward(last_pos, self.swarm.position, last_target)
 
         # Check if the swarm managed to bring the target food object into the nest
-        done = True if self.target.point_query(self.goal_pos) else False 
+        done = True if (self.target.point_query(self.goal_pos).distance < 0) else False 
+
+        new_state = [self.target.body.position[0], self.target.body.position[1],
+                     self.goal_pos[0], self.goal_pos[1],
+                     self.swarm.angle, self.swarm.f_sca]
 
         return new_state, reward, done
 
@@ -108,7 +116,7 @@ class Simulation:
         """
 
         # If box is in goal
-        if self.target.point_query(self.goal_pos):
+        if self.target.point_query(self.goal_pos).distance < 0:
             return 100
         
         dist_to_goal = self.__get_dist(self.swarm.position, self.target.body.position)

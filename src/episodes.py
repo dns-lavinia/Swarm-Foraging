@@ -8,7 +8,7 @@ import pygame
 import keras
 
 from keras.models import Sequential
-from keras.layers import Dense, InputLayer
+from keras.layers import Dense
 
 # Local imports 
 import constants

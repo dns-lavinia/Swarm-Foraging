@@ -9,6 +9,7 @@ import constants
 
 from laser_sensor import LaserSensor
 from fuzzy import RobotFuzzySystem
+from log import create_logger
 
 # Have the same results with every run of the simulation
 random.seed(1)
@@ -23,6 +24,9 @@ class SRobot:
     RADIUS = 10  # cm
 
     def __init__(self, space, start_pos, goal_pos):
+        # Create and save a logger for this class 
+        self.logger = create_logger(name=self.__class__.__name__)
+
         # Save the space the robots are going to be placed in
         self.space = space
 
@@ -117,5 +121,7 @@ class SRobot:
                                                   inp_right=right_dist,
                                                   inp_ang=self.body.angle,
                                                   inp_dist=dist)
+        
+        self.logger.debug(f'New velocities: vtras = {self.vtras}, vrot = {self.vrot}')
         
         return self.vtras, self.vrot

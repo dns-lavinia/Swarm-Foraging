@@ -1,29 +1,23 @@
-import os 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
+import math  # TODO: delete this later
+import time
 import sys
+import os 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress tensorflow warnings
 
 import numpy as np
 import pygame
-import keras
 
 from keras.models import Sequential
 from keras.layers import Dense
 
 # Local imports 
 import constants
+import log
 
 from sim import Simulation
 
-# action = the action the robot takes, meaning, the vrot, vtrans and scaling
-# move the robot with the given action
-# after the new action is decided by the nn, then I fit it and update state
-
-# inputs of the nn: S = (obj_x, obj_y, goal_x, goal_y, f_r_rot, f_r_sca)
 
 def create_nn():
-    print("Creating neural network")
-
     model = Sequential()
     model.add(Dense(64, activation="tanh", input_shape=(6,)))
     model.add(Dense(64, activation="tanh"))
@@ -36,8 +30,13 @@ def create_nn():
 
 
 def run_episodes():
-    print("Running all of the episodes")
+    logger = log.create_logger(name="episodes",
+                               level=log.LOG_DEBUG)
+    
 
+    logger.debug("Running all of the episodes.")
+
+    # Initializing some constants but not only
     discount_factor = 0.95
     eps = 0.5
     eps_decay_factor = 0.999
@@ -46,15 +45,16 @@ def run_episodes():
     sim = Simulation()
     model = create_nn()
 
+    # Get the position of the homebase to show it in the simulation
     goal_x, goal_y = sim.get_homebase_pos()
 
-    print("Before the simulation loop")
+    logger.debug("Before the simulation loop.")
         
     ########################################################################
     # REINFORCEMENT LEARNING ALGO
     ########################################################################
     for _ in range(n_episodes):
-        print("Started new episode")
+        logger.debug("Episode started.")
 
         state = sim.reset()  # reset the environment 
         state = np.reshape(state, [1, len(state)])
@@ -72,9 +72,12 @@ def run_episodes():
             else:
                 action = np.argmax(model.predict(state))
             
-            print("Chosen action ", action)
-            
+            # Run the simulation with the given action
             new_state, reward, done = sim.step(action)
+            new_state = np.reshape(new_state, [1, len(new_state)])
+
+            logger.debug(f"The chosen action is {action}.")
+            # logger.debug(f"State is {state}, and the new state is {new_state}")
 
             target = reward \
                     + discount_factor * np.max(model.predict(state))
@@ -89,19 +92,26 @@ def run_episodes():
                 epochs=1, verbose=0
             )
 
-            new_state = np.reshape(new_state, [1, len(new_state)])
             state = new_state
 
             # Update the remaining simulation steps
             sim_steps -= 1
 
             # Update done
-            print("Done is", done)
             done = done | (sim_steps <= 0) 
 
-            print("Everything was computed for one iteration")
+            logger.debug("End of one iteration.")
 
-            ################################################################
+            ####################################################################
+            # Pygame dependent updates
+            ####################################################################
+            # Finish the execution of the game when a key/button is pressed
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit(0)
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    sys.exit(0)
+
             # Advance the simulation with one step
             sim.space.step(1/constants.FPS) 
 
@@ -116,13 +126,120 @@ def run_episodes():
             sim.space.debug_draw(sim.draw_options)
 
             pygame.display.flip()
-            ################################################################
 
             # advance time
             sim.clock.tick(constants.FPS)
+
+            # TODO: delete this later
+            time.sleep(5)
+            ####################################################################
+
+
+def test_swarm_movement():
+    sim = Simulation()
+    goal_x, goal_y = sim.get_homebase_pos() 
+    done=False
     
-    ########################################################################
+    while True:
+        # Finish the execution of the game when a key/button is pressed
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit(0)
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                sys.exit(0)
+
+        # Advance the simulation with one step
+        sim.space.step(1/constants.FPS) 
+
+        # Make the background green
+        sim.screen.fill(constants.COLOR["artichoke"])
+
+        # Rotate the swarm to the left
+        if not done:
+            new_state, reward, done = sim.step("left")
+
+        # Wait until every robot gets into its position
+        while not sim.swarm.finished_motion():
+            # Finish the execution of the game when a key/button is pressed
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit(0)
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    sys.exit(0)
+
+            # Advance the simulation with one step
+            sim.space.step(1/constants.FPS) 
+
+            # Make the background green
+            sim.screen.fill(constants.COLOR["artichoke"])
+
+
+            pygame.draw.circle(sim.screen, [0, 255, 0], center=sim.swarm.position, radius=sim.swarm.f_sca)
+
+            sim.space.debug_draw(sim.draw_options)
+        
+            pygame.display.flip()
+            sim.clock.tick(constants.FPS)
+
+        done=True
+        print("Got out of the rotation loop")
+
+        # pygame.draw.circle(sim.screen, [0, 255, 0], center=sim.swarm.position, radius=sim.swarm.f_sca)
+
+        # x_1 = sim.swarm.position[0] + sim.swarm.f_sca * math.cos(sim.swarm.angle + sim.swarm.U_SHAPE_ALPHA/2)
+        # y_1 = sim.swarm.position[1] + sim.swarm.f_sca * math.sin(sim.swarm.angle + sim.swarm.U_SHAPE_ALPHA/2)
+        # pygame.draw.circle(sim.screen, [0, 0, 255], center=(x_1, y_1), radius=1)
+
+        # x_2 = sim.swarm.position[0] + sim.swarm.f_sca * math.cos(sim.swarm.angle - sim.swarm.U_SHAPE_ALPHA/2)
+        # y_2 = sim.swarm.position[1] + sim.swarm.f_sca * math.sin(sim.swarm.angle - sim.swarm.U_SHAPE_ALPHA/2)
+        # pygame.draw.circle(sim.screen, [0, 0, 255], center=(x_2, y_2), radius=1)
+
+        sim.space.debug_draw(sim.draw_options)
+        
+        pygame.display.flip()
+        sim.clock.tick(constants.FPS)
+
+    return 
+
+    while True:
+        # Finish the execution of the game when a key/button is pressed
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit(0)
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                sys.exit(0)
+
+            # Rotate the swarm to the left
+            elif 1 or event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT:
+                new_state, reward, done = sim.step("left")
+
+            # Rotate the swarm to the right
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
+                new_state, reward, done = sim.step("right")
+
+            # Move the swarm in a straight line 
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_UP:
+                new_state, reward, done = sim.step("up")
+
+        # Advance the simulation with one step
+        sim.space.step(1/constants.FPS) 
+
+        # Make the background green
+        sim.screen.fill(constants.COLOR["artichoke"])
+
+        # Draw the homebase flag                            
+        pygame.draw.polygon(surface=sim.screen, 
+                            color=constants.COLOR["auburn"], 
+                            points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
+        
+
+        # Move the swarm in one direction 
+
+        sim.space.debug_draw(sim.draw_options)
+
+        pygame.display.flip()
+        sim.clock.tick(constants.FPS)
 
 
 if __name__ == "__main__":
-    run_episodes()
+    test_swarm_movement()

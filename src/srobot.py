@@ -1,4 +1,3 @@
-import random
 import math
 import pymunk
 
@@ -6,26 +5,20 @@ from pymunk.vec2d import Vec2d
 
 # Local imports
 import constants
+import log
 
 from laser_sensor import LaserSensor
 from fuzzy import RobotFuzzySystem
-from log import create_logger
-
-# Have the same results with every run of the simulation
-random.seed(1)
-
-
-def random_sign():
-    return 1 if random.randint(0, 2) < 1 else -1
 
 
 class SRobot: 
     MASS = 0.65  # kg
     RADIUS = 10  # cm
 
-    def __init__(self, space, start_pos, goal_pos):
+    def __init__(self, space, start_pos, start_angle, goal_pos):
         # Create and save a logger for this class 
-        self.logger = create_logger(name=self.__class__.__name__)
+        self.logger = log.create_logger(name=self.__class__.__name__,
+                                        level=log.LOG_INFO)
 
         # Save the space the robots are going to be placed in
         self.space = space
@@ -33,15 +26,13 @@ class SRobot:
         # All of the robots know the goal or the nest position
         self.goal_pos = goal_pos
 
-        # Create the robot in the vicinity of the starting point
-        x = start_pos[0] 
-        y = start_pos[1] 
-
         # Create the body of the robot
-        self.body = self.__add_robot_body(space, position=(x, y))
+        self.body = self.__add_robot_body(space, 
+                                          position=start_pos, 
+                                          start_angle=start_angle)
 
         # Attach a LaserSensor to it
-        self.sensor = LaserSensor(position=(x, y), body_angle=self.body.angle)
+        self.sensor = LaserSensor(position=start_pos, body_angle=self.body.angle)
 
         # Attach the fuzzy controller to it
         self.flc = RobotFuzzySystem()
@@ -50,36 +41,71 @@ class SRobot:
         self.vtras = 0
         self.vrot = 0
 
+    # TODO: update this function to work properly. Also, add a docstring for it.
     def update_vtras(self, vtras, angle):
-        self.body.velocity = (vtras, 0) 
         self.body.angle = angle
+
+        dv = Vec2d(30*vtras, 0.0)
+        self.body.velocity = self.body.rotation_vector.cpvrotate(dv) 
+
+        # Make the movement
+        self.space.step(1 / constants.FPS)
+
+        # Stop the motion
+        self.body.velocity = 0, 0
+
+        # Update the position of the sensor
+        self.sensor.update_position(self.body.position, self.body.angle)  
+
+    # TODO: update this function to work properly. Also, add a docstring for it.
+    def update_vrot(self, angle):
         
-        self.vtras = vtras
-        self.vrot = 0
+        # self.body.velocity = 2 * math.pi * f_sca, 0
+        # self.body.angular_velocity = vrot  # in radians
 
         # Make the movement
         self.space.step(1 / constants.FPS)
 
-        # Update the position of the sensor
-        self.sensor.update_position(self.body.position, self.body.angle)  
-
-    def update_vrot(self, vrot):
-        self.body.velocity = (self.vtras, 0) 
-        self.body.angular_velocity = vrot  # in radians
-
-        # Make the movement
-        self.space.step(1 / constants.FPS)
+        # Stop the motion
+        self.body.velocity = 0, 0
 
         # Update the position of the sensor
-        self.sensor.update_position(self.body.position, self.body.angle)  
+        self.sensor.update_position(self.body.position, self.body.angle) 
+    
+    def move_to(self, target_pos):
+        target_delta = target_pos - self.body.position
+        turn = self.body.rotation_vector.cpvunrotate(target_delta).angle 
+        self.body.angle = self.body.angle - turn
 
-    def __add_robot_body(self, space, position):
+        dist = (target_pos - self.body.position).get_length_sqrd()
+        print("Dist is ", dist)
+
+        # Drive the robot towards the target object
+        if dist < 0.5 ** 2:
+            # If the robot is close enough to the target object, stop
+            self.body.velocity = 0, 0
+        else:
+            if target_delta.dot(self.body.rotation_vector) > 0.0:
+                direction = 1.0
+            else:
+                direction = -1.0
+
+            dv = Vec2d(10 * direction, 0.0)
+            self.body.velocity = self.body.rotation_vector.cpvrotate(dv)
+
+        self.space.step(1/constants.FPS)
+
+        # Update the position of the sensor
+        self.sensor.update_position(self.body.position, self.body.angle) 
+
+    def __add_robot_body(self, space, position, start_angle):
         """Create and add to the space a box shape for the robot body.
         
         size[cm]; mass[kg]"""
     
         body = pymunk.Body()
         body.position = position
+        body.angle = start_angle
 
         shape = pymunk.Circle(body, self.RADIUS)
         

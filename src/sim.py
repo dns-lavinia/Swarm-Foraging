@@ -44,12 +44,11 @@ class Simulation:
         # Declare the optional attributes of the space
         self.draw_options = pymunk.pygame_util.DrawOptions(self.screen)
 
-        # Add a box around the environment so that objects cannot move past the
-        # visible screen
-        self.__add_boundary()
-
         # Add the homebase 
         self.goal_pos = self.get_homebase_pos()
+
+        # Create every object in the simulation
+        self.reset()
     
     def reset(self):
         """On reset, the robots and the target are placed in the starting positions."""
@@ -57,6 +56,9 @@ class Simulation:
         # Remove all bodies from the space
         for shape in self.space.shapes:
             self.space.remove(shape)
+
+        # Add the boundary again
+        self.__add_boundary()
 
         # Add the target again
         self.target = self.add_target()
@@ -66,7 +68,7 @@ class Simulation:
                                      start_angle=(-math.pi / 2),
                                      sim_space=self.space,
                                      goal_pos=self.goal_pos)
-        
+
         return [self.target.body.position[0], self.target.body.position[1],
                 self.goal_pos[0], self.goal_pos[1],
                 self.swarm.angle, self.swarm.f_sca]
@@ -79,8 +81,9 @@ class Simulation:
             3 = sca.
         """
 
-        assert (action in [0, 1, 2]), \
-                "[Simulation.step] Given action is not recognized"
+        # TODO: uncomment this
+        # assert (action in [0, 1, 2]), \
+        #         "[Simulation.step] Given action is not recognized"
 
         last_pos = self.swarm.position  # Save the last position of the swarm 
         last_target = self.target.body.position  # Save the last position of the target

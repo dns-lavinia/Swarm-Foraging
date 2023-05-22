@@ -156,10 +156,11 @@ def test_swarm_movement():
 
         # Rotate the swarm to the left
         if not done:
-            new_state, reward, done = sim.step("left")
+            new_state, reward, done = sim.step(1)
+            print(sim.swarm.state)
 
         # Wait until every robot gets into its position
-        while not sim.swarm.finished_motion():
+        while sim.swarm.state != "NONE":
             # Finish the execution of the game when a key/button is pressed
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -170,9 +171,10 @@ def test_swarm_movement():
             # Advance the simulation with one step
             sim.space.step(1/constants.FPS) 
 
+            sim.swarm.perform_action(1)
+
             # Make the background green
             sim.screen.fill(constants.COLOR["artichoke"])
-
 
             pygame.draw.circle(sim.screen, [0, 255, 0], center=sim.swarm.position, radius=sim.swarm.f_sca)
 
@@ -182,7 +184,6 @@ def test_swarm_movement():
             sim.clock.tick(constants.FPS)
 
         done=True
-        print("Got out of the rotation loop")
 
         # pygame.draw.circle(sim.screen, [0, 255, 0], center=sim.swarm.position, radius=sim.swarm.f_sca)
 

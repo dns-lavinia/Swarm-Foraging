@@ -34,7 +34,9 @@ class SwarmController:
 
         # Flag used to denote that the swarm is busy
         self.in_motion = False
+
         self.r_target_pos = None
+        self.state = "NONE"
 
     def perform_action(self, action):
         """Perform an action.
@@ -44,11 +46,77 @@ class SwarmController:
             3 = sca.
         """
         
-        # TODO: uncomment this
-        # assert (action in [0, 1, 2]), \
-        #         "[Simulation.step] Given action is not recognized"
+        assert (action in [0, 1, 2]), \
+                "[Simulation.step] Given action is not recognized"
+
+        # If the swarm is ready to accept commands  
+        if self.state == "NONE":
+            # Get the velocities to be used for the robots in the swarm
+            vtras, vrot = self.get_avg_vel()
+
+            # Move the swarm
+            if action == 0:
+                self.state = "IN_TRANSLATION"
+
+            # Rotate the swarm
+            elif action == 1:
+                # Target positions for eac robot in the swarm
+                self.r_target_pos = []
+
+                # Start the translation movement for all of the robots to their
+                # new designated position in the swarm
+                for i in range(self.swarm_size):
+                    # Get the new position of the robot within the swarm
+                    new_pos = self.__compute_new_pos_for_robot(vrot, robot_n=i)
+                    
+                    # Save the new position
+                    self.r_target_pos.append(new_pos)
+
+                self.state = "IN_ROTATION_PART1"
         
-        # Get the average translational and rotational speed of the robots
+        elif self.state == "IN_TRANSLATION":
+            self.state = "NONE"
+        
+        elif self.state == "IN_ROTATION_PART1":
+            finished_tras = 0
+
+            # Move each robot to the new spot
+            for i in range(self.swarm_size):
+                dist = (self.robots[i].body.position - self.r_target_pos[i]).get_length_sqrd()
+
+                if dist >= 0.5 ** 2:
+                    self.robots[i].move_to(target_pos=self.r_target_pos[i])
+                else:
+                    self.robots[i].body.velocity = 0, 0
+                    finished_tras += 1
+                    
+            # If all of the robots finished moving to their designated position
+            # align them with the swarm angle
+            if finished_tras == self.swarm_size:
+                # Update the angle of the swarm
+                self.angle = self.angle - self.ROT_ANGLE
+                
+                self.state="IN_ROTATION_PART2"
+
+        elif self.state == "IN_ROTATION_PART2":
+            finished_rot = 0
+
+            for i in range(self.swarm_size):
+                if ((self.robots[i].body.angle - self.angle) % (2 * math.pi)) > 0.1:
+                    self.robots[i].rotate_to(self.angle)
+                else: 
+                    self.robots[i].body.angular_velocity = 0
+                    finished_rot += 1
+
+            if finished_rot == self.swarm_size:
+                self.state = "NONE"
+
+    def get_avg_vel(self):
+        """
+        Returns:
+            (float, float): Average vrot and vtras for all robots.
+        """
+        
         sum_vtras = 0
         sum_vrot = 0
         n = len(self.robots)
@@ -59,95 +127,7 @@ class SwarmController:
             sum_vtras += vtras
             sum_vrot += vrot
 
-        avg_vtras = sum_vtras / n
-        avg_vrot = sum_vrot / n
-        
-        # TODO: uncomment this
-        # TODO: update the central position of the swarm
-        # # Move the swarm linearly
-        # if action == 0:
-        #     # Move the swarm 
-        #     for i in range(n):
-        #         self.robots[i].update_vtras(avg_vtras, self.angle)
-        
-        # # Rotate the swarm
-        # elif action == 1:
-        #     # Rotate the swarm
-        #     for i in range(n):
-        #         self.robots[i].update_vrot(avg_vrot)
-
-        #     # update the angle 
-        #     self.angle = self.angle + avg_vrot / constants.FPS 
-
-        # elif action == 2:
-        #     # Scale the swarm
-        #     print("Scaling the swarm. Oops, action not implemented")
-
-        # TODO: delete this later
-        # Move the swarm linearly
-        if action == "up":
-            # Move the swarm 
-            for i in range(n):
-                self.robots[i].update_vtras(2, self.angle)
-        
-        # Rotate the swarm
-        elif action == "left":
-            # Initialization
-            if not self.in_motion:
-                # Update the busy status of the swarm
-                self.in_motion = True 
-
-                # Target positions for each robot in the swarm
-                self.r_target_pos = []
-
-                # Rotate the swarm
-                for i in range(n):
-                    # Get the new position of the robot within the swarm
-                    new_pos = self.__compute_new_pos_for_robot(-2, i)
-                    
-                    # Save the new position
-                    self.r_target_pos.append(new_pos)
-                
-                print("The new positions for the robots are: ", self.r_target_pos)
-
-            # Move each robot to the new spot
-            for i in range(n):
-                self.robots[i].move_to(self.r_target_pos[i])
-            
-        elif action == "right":
-            # update the angle 
-            self.angle = self.angle + 1 / constants.FPS 
-            print(f"The updated angle of the swarm: {self.angle}")
-
-            # Rotate the swarm
-            for i in range(n):
-                self.robots[i].update_vrot(1, self.f_sca, self.angle, self.position)
-
-    def finished_motion(self):
-        # If there is no motion ongoing
-        if self.in_motion is False:
-            return True
-        
-        for i in range(self.swarm_size):
-            dist = (self.robots[i].body.position - self.r_target_pos[i]).get_length_sqrd()
-
-            if  dist >= 0.5 ** 2:
-                return False 
-            else:    
-                self.robots[i].body.angle = self.angle - self.ROT_ANGLE
-
-                for i in range(self.swarm_size):
-                    self.robots[i].body.velocity = 0, 0
-
-        # TODO: move this update in some more reasonable place
-        # update the angle 
-        self.angle = self.angle - self.ROT_ANGLE
-
-
-        # Motion has finished, reset the flag
-        self.in_motion = False 
-
-        return True 
+        return sum_vtras/n, sum_vrot/n
 
     def __compute_new_pos_for_robot(self, vrot, robot_n):
         """Based on the direction of the rotational velocity, compute the new 

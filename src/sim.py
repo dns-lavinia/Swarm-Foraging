@@ -81,9 +81,8 @@ class Simulation:
             3 = sca.
         """
 
-        # TODO: uncomment this
-        # assert (action in [0, 1, 2]), \
-        #         "[Simulation.step] Given action is not recognized"
+        assert (action in [0, 1, 2]), \
+                "[Simulation.step] Given action is not recognized"
 
         last_pos = self.swarm.position  # Save the last position of the swarm 
         last_target = self.target.body.position  # Save the last position of the target

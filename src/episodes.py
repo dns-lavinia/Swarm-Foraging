@@ -171,7 +171,7 @@ def test_swarm_movement():
             # Advance the simulation with one step
             sim.space.step(1/constants.FPS) 
 
-            sim.swarm.perform_action(1)
+            sim.swarm.run()
 
             # Make the background green
             sim.screen.fill(constants.COLOR["artichoke"])

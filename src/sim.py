@@ -88,7 +88,7 @@ class Simulation:
         last_target = self.target.body.position  # Save the last position of the target
 
         # Perform the given action
-        self.swarm.perform_action(action)
+        self.swarm.run(action)
 
         # Compute the reward
         reward = self.__get_reward(last_pos, self.swarm.position, last_target)

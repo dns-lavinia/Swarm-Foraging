@@ -1,9 +1,22 @@
 import math
 
+from enum import Enum
+
 # Local imports
-import constants
+import log 
 
 from srobot import SRobot
+
+
+class SwarmState(Enum):
+    NONE = 0
+    
+    # States used for the rotation of the swarm
+    ROTATION_MOVE = 1
+    ROTATION_ROT = 2
+
+    # States used for the translation of the swarm
+    TRANSLATION_INI = 3
 
 
 class SwarmController:
@@ -17,14 +30,20 @@ class SwarmController:
     # The direction of the rotation has to be given by vrot.
     ROT_ANGLE = math.pi / 10
 
+    SWARM_RADIUS = 20  # in cm
+
     def __init__(self, start_pos, start_angle, sim_space, goal_pos, *, swarm_size=SWARM_SIZE):
+        # Create and save the logger for this class
+        self.logger = log.create_logger(name=self.__class__.__name__,
+                                        level=log.LOG_INFO)
+        
         self.space = sim_space
         self.goal_pos = goal_pos
 
         self.swarm_size = swarm_size
         self.position = start_pos
         self.angle = start_angle  # in radians
-        self.f_sca = 20  # Denotes the radius of the swarm formation
+        self.f_sca = self.SWARM_RADIUS  # in cm
 
         # Compute the beta angle (in radians)
         self.b_angle = (2 * math.pi - self.U_SHAPE_ALPHA) / (swarm_size - 1)
@@ -36,48 +55,60 @@ class SwarmController:
         self.in_motion = False
 
         self.r_target_pos = None
-        self.state = "NONE"
+        self.vtras, self.vrot = None, None
 
-    def perform_action(self, action):
-        """Perform an action.
+        # Upon initialization, the swarm isn't performing any action
+        self.state = SwarmState.NONE
+
+    def run(self, action=None):
+        """The main body that drives the swarm. Can give an optional argument 
+        which denotes the action to take (move the swarm linearly, rotate the
+        swarm or scale it). If the swarm is already processing an action it will
+        continue to do so until it is completed.
         
         Args:
             action (int): Can be one of the three options: 0 = tras, 1 = rot, 
-            3 = sca.
+            3 = sca or None (in which case the argument can be skipped).
         """
         
-        assert (action in [0, 1, 2]), \
+        assert (action in [0, 1, 2] or action is None), \
                 "[Simulation.step] Given action is not recognized"
 
+        # Print a message in the case there is a given action and the swarm is 
+        # already processing something else
+        if self.state != SwarmState.NONE and action is not None:
+            self.logger.info("The swarm is already running a different action")
+            return
+
         # If the swarm is ready to accept commands  
-        if self.state == "NONE":
+        if self.state == SwarmState.NONE:
             # Get the velocities to be used for the robots in the swarm
-            vtras, vrot = self.get_avg_vel()
+            self.vtras, self.vrot = self.get_avg_vel()
 
             # Move the swarm
             if action == 0:
-                self.state = "IN_TRANSLATION"
+                self.state = SwarmState.TRANSLATION_INI
 
             # Rotate the swarm
             elif action == 1:
-                # Target positions for eac robot in the swarm
+                # Target positions for each robot in the swarm
                 self.r_target_pos = []
 
                 # Start the translation movement for all of the robots to their
                 # new designated position in the swarm
                 for i in range(self.swarm_size):
                     # Get the new position of the robot within the swarm
-                    new_pos = self.__compute_new_pos_for_robot(vrot, robot_n=i)
+                    new_pos = self.__compute_new_pos_for_robot(self.vrot, robot_n=i)
                     
                     # Save the new position
                     self.r_target_pos.append(new_pos)
 
-                self.state = "IN_ROTATION_PART1"
+                self.state = SwarmState.ROTATION_MOVE
         
-        elif self.state == "IN_TRANSLATION":
-            self.state = "NONE"
+        elif self.state == SwarmState.TRANSLATION_INI:
+            self.state = SwarmState.NONE
         
-        elif self.state == "IN_ROTATION_PART1":
+        elif self.state == SwarmState.ROTATION_MOVE:
             finished_tras = 0
 
             # Move each robot to the new spot
@@ -94,11 +125,12 @@ class SwarmController:
             # align them with the swarm angle
             if finished_tras == self.swarm_size:
                 # Update the angle of the swarm
-                self.angle = self.angle - self.ROT_ANGLE
+                self.set_angle(new_angle=(self.angle 
+                                        + self.get_sign(self.vrot) * self.ROT_ANGLE))
                 
-                self.state="IN_ROTATION_PART2"
+                self.state = SwarmState.ROTATION_ROT
 
-        elif self.state == "IN_ROTATION_PART2":
+        elif self.state == SwarmState.ROTATION_ROT:
             finished_rot = 0
 
             for i in range(self.swarm_size):
@@ -109,7 +141,23 @@ class SwarmController:
                     finished_rot += 1
 
             if finished_rot == self.swarm_size:
-                self.state = "NONE"
+                self.state = SwarmState.NONE
+
+    def set_angle(self, new_angle):
+        self.angle = new_angle
+
+    def get_sign(self, num):
+        """
+        Returns:
+            int: sign(num)
+        """
+
+        if num > 0:
+            return 1
+        elif num < 0:
+            return -1 
+        
+        return 0
 
     def get_avg_vel(self):
         """
@@ -148,12 +196,12 @@ class SwarmController:
 
         if vrot > 0:
             # Move clockwise
-            x_new = swarm_center[0] + 20 * math.cos(old_angle + self.ROT_ANGLE)
-            y_new = swarm_center[1] + 20 * math.sin(old_angle + self.ROT_ANGLE)
+            x_new = swarm_center[0] + self.f_sca * math.cos(old_angle + self.ROT_ANGLE)
+            y_new = swarm_center[1] + self.f_sca * math.sin(old_angle + self.ROT_ANGLE)
         else:
             # Move anti-clockwise
-            x_new = swarm_center[0] + 20 * math.cos(old_angle - self.ROT_ANGLE)
-            y_new = swarm_center[1] + 20 * math.sin(old_angle - self.ROT_ANGLE)
+            x_new = swarm_center[0] + self.f_sca * math.cos(old_angle - self.ROT_ANGLE)
+            y_new = swarm_center[1] + self.f_sca * math.sin(old_angle - self.ROT_ANGLE)
         
         return x_new, y_new
 

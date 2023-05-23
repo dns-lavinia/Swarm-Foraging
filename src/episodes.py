@@ -19,10 +19,13 @@ from swarm import SwarmState
 
 
 def create_nn():
+    # NOTE: I changed the output of the neural network to 2 outputs instead of
+    # 3, to represent vtras and vrot (I ignored the scaling part for now and
+    # I assumed that the swarm is already in an optimal scaling from the beginning)
     model = Sequential()
     model.add(Dense(64, activation="tanh", input_shape=(6,)))
     model.add(Dense(64, activation="tanh"))
-    model.add(Dense(3, activation="linear")) # linear activation
+    model.add(Dense(2, activation="linear")) # linear activation
 
     # Compile the model
     model.compile(loss='mse', optimizer='adam')
@@ -34,7 +37,6 @@ def run_episodes():
     logger = log.create_logger(name="episodes",
                                level=log.LOG_DEBUG)
     
-
     logger.debug("Running all of the episodes.")
 
     # Initializing some constants but not only
@@ -67,6 +69,7 @@ def run_episodes():
         # Run as long as the maximum simulation steps number is not reached and 
         # as long as the robots did not reach the goal with the target
         while not done:
+            print(f"Step {700 - sim_steps}")
             if np.random.random() < eps:
                 # Get a random action
                 action = np.random.randint(0, sim.ACTION_SPACE_N)
@@ -119,10 +122,10 @@ def run_episodes():
             # Make the background green
             sim.screen.fill(constants.COLOR["artichoke"])
 
-            # Draw the homebase flag                            
-            pygame.draw.polygon(surface=sim.screen, 
-                                color=constants.COLOR["auburn"], 
-                                points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
+            # # Draw the homebase flag                            
+            # pygame.draw.polygon(surface=sim.screen, 
+            #                     color=constants.COLOR["auburn"], 
+            #                     points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
 
             sim.space.debug_draw(sim.draw_options)
 
@@ -213,4 +216,5 @@ def test_swarm_movement():
 
 
 if __name__ == "__main__":
-    test_swarm_movement()
+    # test_swarm_movement()
+    run_episodes()

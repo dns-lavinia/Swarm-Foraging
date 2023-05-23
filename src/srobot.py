@@ -42,11 +42,10 @@ class SRobot:
         self.vrot = 0
 
     def move(self, vtras):
-        self.body.velocity = 0, -vtras
-
         self.space.step(1/constants.FPS)
 
-        self.body.velocity = 0, 0
+        dv = Vec2d(vtras, 0.0)
+        self.body.velocity = self.body.rotation_vector.cpvrotate(dv)
 
         # Update the position of the sensor
         self.sensor.update_position(self.body.position, self.body.angle)

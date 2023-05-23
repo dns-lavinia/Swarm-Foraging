@@ -1,3 +1,4 @@
+import sys
 import random
 import math
 
@@ -9,11 +10,11 @@ import pymunk.pygame_util
 import constants
 
 from srobot import SRobot
-from swarm import SwarmController
+from swarm import SwarmController, SwarmState
 
 class Simulation:
     OBSERVATION_SPACE_N = 6
-    ACTION_SPACE_N = 3
+    ACTION_SPACE_N = 2
 
     def __init__(self, screen_size=constants.SCREEN_SIZE):
         """Initialize the simulation.
@@ -58,7 +59,7 @@ class Simulation:
             self.space.remove(shape)
 
         # Add the boundary again
-        self.__add_boundary()
+        # self.__add_boundary()
 
         # Add the target again
         self.target = self.add_target()
@@ -69,9 +70,7 @@ class Simulation:
                                      sim_space=self.space,
                                      goal_pos=self.goal_pos)
 
-        return [self.target.body.position[0], self.target.body.position[1],
-                self.goal_pos[0], self.goal_pos[1],
-                self.swarm.angle, self.swarm.f_sca]
+        return self.__get_state_vars()
 
     def step(self, action):
         """Advance the simulation one step given an action.
@@ -90,17 +89,73 @@ class Simulation:
         # Perform the given action
         self.swarm.run(action)
 
+        while self.swarm.state != SwarmState.NONE:
+            # Finish the execution of the game when a key/button is pressed
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit(0)
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    sys.exit(0)
+
+            # Advance the simulation with one step
+            self.space.step(1/constants.FPS) 
+
+            self.swarm.run()
+
+            # Make the background green
+            self.screen.fill(constants.COLOR["artichoke"])
+
+            # pygame.draw.circle(self.screen, [0, 255, 0], center=sim.swarm.position, radius=sim.swarm.f_sca)
+
+            self.space.debug_draw(self.draw_options)
+
+            # Draw the homebase flag                            
+            # pygame.draw.polygon(surface=sim.screen, 
+            #                     color=constants.COLOR["auburn"], 
+            #                     points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
+        
+            pygame.display.flip()
+            self.clock.tick(constants.FPS)
+
         # Compute the reward
         reward = self.__get_reward(last_pos, self.swarm.position, last_target)
 
         # Check if the swarm managed to bring the target food object into the nest
         done = True if (self.target.point_query(self.goal_pos).distance < 0) else False 
 
-        new_state = [self.target.body.position[0], self.target.body.position[1],
-                     self.goal_pos[0], self.goal_pos[1],
-                     self.swarm.angle, self.swarm.f_sca]
+        new_state = self.__get_state_vars()
 
         return new_state, reward, done
+    
+    def __get_state_vars(self):
+        """Returns a tuple containing the relevant information for the learning
+        part. The elements (in this order) are:
+            [1] The distance from the swarm to the target \n
+            [2] The angle of the swarm to the target \n
+            [3] The distance of the box with respect to the goal \n
+            [4] The angle of the box with respect to the goal \n
+            [5] The rotation of the swarm \n
+            [6] The scaling factor of the swarm -> it is probably redundant atm. \n
+        """
+        
+        # [1] Get the distance from the swarm to the target
+        dist_to_box = self.__get_dist(pos1=self.swarm.position, 
+                                      pos2=self.target.body.position) 
+
+        # [2] Get the angle from the swarm to the target 
+        angle_to_box = math.atan2(self.swarm.position[0] - self.target.body.position[0],
+                                  self.swarm.position[1] - self.target.body.position[1])
+
+        # [3] Get the distance from the box to the goal
+        dist_to_goal = self.__get_dist(pos1=self.target.body.position,
+                                       pos2=self.goal_pos)
+
+        # [4] Get the angle of the box to the goal
+        angle_to_goal = math.atan2(self.target.body.position[0] - self.goal_pos[0],
+                                   self.target.body.position[1] - self.goal_pos[1])
+        
+        return [dist_to_box, angle_to_box, dist_to_goal, angle_to_goal, 
+                self.swarm.angle, self.swarm.f_sca] 
 
     def __get_dist(self, pos1, pos2):
         """Based on 2 points in the simulation, get the distance between them."""

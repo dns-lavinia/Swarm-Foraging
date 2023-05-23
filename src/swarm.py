@@ -105,6 +105,9 @@ class SwarmController:
                     # Save the new position
                     self.r_target_pos.append(new_pos)
 
+                    # Stop the motion of the robot
+                    self.robots[i].body.velocity = 0, 0
+
                 self.state = SwarmState.ROTATION_MOVE
         
         elif self.state == SwarmState.TRANSLATION_INI:

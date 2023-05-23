@@ -157,7 +157,6 @@ def test_swarm_movement():
         # Rotate the swarm to the left
         if not done:
             new_state, reward, done = sim.step(1)
-            print(sim.swarm.state)
 
         # Wait until every robot gets into its position
         while sim.swarm.state != "NONE":

@@ -66,16 +66,26 @@ class SRobot:
         # Update the position of the sensor
         self.sensor.update_position(self.body.position, self.body.angle) 
 
-    def rotate_to(self, angle):
-        """Rotate the robot to a specific angle."""
+    def rotate_to(self, angle, direction):
+        """Rotate the robot to a given angle."""
 
-        if ((self.body.angle - angle) % (2 * math.pi)) < 0.1:
+        # TODO: optimize this function a bit so that it does not perform
+        # an almost full revolution just because the angle is positive or
+        # negative
+        norm_angle = angle % (2 * math.pi)
+        norm_self_angle = self.body.angle % (2 * math.pi)
+
+        if norm_angle < 0:
+            norm_angle = 2 * math.pi - norm_angle
+        
+        if norm_self_angle < 0:
+            norm_self_angle = 2 * math.pi - norm_self_angle
+
+        if abs(norm_self_angle - norm_angle) < 0.1:
             self.body.angular_velocity = 0
         else:
-            if angle > 0:
-                self.body.angular_velocity = math.pi/10
-            else:
-                self.body.angular_velocity = -math.pi/10
+            self.body.angular_velocity = direction * math.pi/10
+
 
         self.space.step(1/constants.FPS)
 

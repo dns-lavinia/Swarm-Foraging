@@ -55,6 +55,7 @@ class SwarmController:
         self.in_motion = False
 
         self.r_target_pos = None
+        self.r_dir = None
         self.vtras, self.vrot = None, None
 
         # Upon initialization, the swarm isn't performing any action
@@ -128,14 +129,46 @@ class SwarmController:
                 self.set_angle(new_angle=(self.angle 
                                         + self.get_sign(self.vrot) * self.ROT_ANGLE))
                 
+                # Save the optimal direction that each robot should rotate at
+                self.r_dir = []
+                for i in range(self.swarm_size):
+                    norm_angle = self.angle % (2 * math.pi)
+                    norm_robot_angle = self.robots[i].body.angle % (2 * math.pi)
+
+                    if norm_angle < 0:
+                        norm_angle = 2 * math.pi - norm_angle
+                    
+                    if norm_robot_angle < 0:
+                        norm_robot_angle = 2 * math.pi - norm_robot_angle 
+
+                    diff1 = norm_angle - norm_robot_angle
+                    diff2 = norm_robot_angle - norm_angle
+
+                    if diff1 < 0:
+                        diff1 = 2 * math.pi - diff1 
+                    
+                    if diff2 < 0:
+                        diff2 = 2 * math.pi - diff2
+
+                    self.r_dir.append(1 if diff1 < diff2 else -1)
+        
                 self.state = SwarmState.ROTATION_ROT
 
         elif self.state == SwarmState.ROTATION_ROT:
             finished_rot = 0
 
             for i in range(self.swarm_size):
-                if ((self.robots[i].body.angle - self.angle) % (2 * math.pi)) > 0.1:
-                    self.robots[i].rotate_to(self.angle)
+                norm_angle = self.angle % (2 * math.pi)
+                norm_robot_angle = self.robots[i].body.angle % (2 * math.pi)
+
+                if norm_angle < 0:
+                    norm_angle = 2 * math.pi - norm_angle
+                
+                if norm_robot_angle < 0:
+                    norm_robot_angle = 2 * math.pi - norm_robot_angle 
+                
+                if abs(norm_robot_angle - norm_angle) > 0.1:
+                    self.robots[i].rotate_to(self.angle, self.r_dir[i])
                 else: 
                     self.robots[i].body.angular_velocity = 0
                     finished_rot += 1

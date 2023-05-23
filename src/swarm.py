@@ -4,6 +4,7 @@ from enum import Enum
 
 # Local imports
 import log 
+import constants
 
 from srobot import SRobot
 
@@ -107,6 +108,16 @@ class SwarmController:
                 self.state = SwarmState.ROTATION_MOVE
         
         elif self.state == SwarmState.TRANSLATION_INI:
+            for i in range(self.swarm_size):
+                self.robots[i].move(self.vtras)
+            
+            # Update the position of the swarm
+            new_x = self.position[0] + self.vtras * (1/constants.FPS) * math.cos(self.angle)
+            new_y = self.position[1] + self.vtras * (1/constants.FPS) * math.sin(self.angle)
+            
+            self.position = new_x, new_y
+
+            # Movement finished
             self.state = SwarmState.NONE
         
         elif self.state == SwarmState.ROTATION_MOVE:

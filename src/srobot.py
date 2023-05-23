@@ -40,6 +40,16 @@ class SRobot:
         # Add vtras and vrot variables 
         self.vtras = 0
         self.vrot = 0
+
+    def move(self, vtras):
+        self.body.velocity = 0, -vtras
+
+        self.space.step(1/constants.FPS)
+
+        self.body.velocity = 0, 0
+
+        # Update the position of the sensor
+        self.sensor.update_position(self.body.position, self.body.angle)
     
     def move_to(self, target_pos):
         target_delta = target_pos - self.body.position

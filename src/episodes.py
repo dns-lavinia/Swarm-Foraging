@@ -15,6 +15,7 @@ import constants
 import log
 
 from sim import Simulation
+from swarm import SwarmState
 
 
 def create_nn():
@@ -156,10 +157,10 @@ def test_swarm_movement():
 
         # Rotate the swarm to the left
         if not done:
-            new_state, reward, done = sim.step(1)
+            new_state, reward, done = sim.step(0)
 
         # Wait until every robot gets into its position
-        while sim.swarm.state != "NONE":
+        while sim.swarm.state != SwarmState.NONE:
             # Finish the execution of the game when a key/button is pressed
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -178,12 +179,23 @@ def test_swarm_movement():
             pygame.draw.circle(sim.screen, [0, 255, 0], center=sim.swarm.position, radius=sim.swarm.f_sca)
 
             sim.space.debug_draw(sim.draw_options)
+
+            # Draw the homebase flag                            
+            pygame.draw.polygon(surface=sim.screen, 
+                                color=constants.COLOR["auburn"], 
+                                points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
         
             pygame.display.flip()
             sim.clock.tick(constants.FPS)
+        
+        done=False
 
-        done=True
+        pygame.draw.circle(sim.screen, [0, 255, 0], center=sim.swarm.position, radius=sim.swarm.f_sca)
 
+        # Draw the homebase flag                            
+        pygame.draw.polygon(surface=sim.screen, 
+                            color=constants.COLOR["auburn"], 
+                            points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
         # pygame.draw.circle(sim.screen, [0, 255, 0], center=sim.swarm.position, radius=sim.swarm.f_sca)
 
         # x_1 = sim.swarm.position[0] + sim.swarm.f_sca * math.cos(sim.swarm.angle + sim.swarm.U_SHAPE_ALPHA/2)
@@ -196,47 +208,6 @@ def test_swarm_movement():
 
         sim.space.debug_draw(sim.draw_options)
         
-        pygame.display.flip()
-        sim.clock.tick(constants.FPS)
-
-    return 
-
-    while True:
-        # Finish the execution of the game when a key/button is pressed
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sys.exit(0)
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                sys.exit(0)
-
-            # Rotate the swarm to the left
-            elif 1 or event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT:
-                new_state, reward, done = sim.step("left")
-
-            # Rotate the swarm to the right
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
-                new_state, reward, done = sim.step("right")
-
-            # Move the swarm in a straight line 
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_UP:
-                new_state, reward, done = sim.step("up")
-
-        # Advance the simulation with one step
-        sim.space.step(1/constants.FPS) 
-
-        # Make the background green
-        sim.screen.fill(constants.COLOR["artichoke"])
-
-        # Draw the homebase flag                            
-        pygame.draw.polygon(surface=sim.screen, 
-                            color=constants.COLOR["auburn"], 
-                            points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
-        
-
-        # Move the swarm in one direction 
-
-        sim.space.debug_draw(sim.draw_options)
-
         pygame.display.flip()
         sim.clock.tick(constants.FPS)
 

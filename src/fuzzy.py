@@ -294,8 +294,8 @@ class RobotFuzzySystem:
         """Fuzzy logic controller that combines the rendevous and avoidance FLCs.
         
         Returns:
-            [float, float]: List containing the defuzzified values for vrot (the
-            rotational speed) and for vtrans (translational speed) in this order."""
+            [float, float]: List containing the defuzzified values for vtrans 
+            (translational speed) and for vrot (rotational speed) in this order."""
 
         input_data = {
             self.left: inp_left,
@@ -318,5 +318,5 @@ class RobotFuzzySystem:
         rules_vtrans = RuleModified(rendevous_rules_vtrans)
 
         # Returned the defuzzified results separate for vtrans and vrot
-        return rules_vrot(input_data, method="tagaki-sugeno-0"), \
-               rules_vtrans(input_data, method="tagaki-sugeno-0")
+        return rules_vtrans(input_data, method="tagaki-sugeno-0"), \
+               rules_vrot(input_data, method="tagaki-sugeno-0")

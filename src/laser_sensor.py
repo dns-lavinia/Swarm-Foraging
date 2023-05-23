@@ -125,8 +125,9 @@ class LaserSensor:
                     color = self.screen.get_at((x_line, y_line))
                     
                     # If the color is different from the background of the 
-                    # screen, then an objstacle was found
-                    if (color[0], color[1], color[2]) != constants.COLOR["artichoke"]:
+                    # screen, or the home base then an objstacle was found
+                    if ((color[0], color[1], color[2]) != constants.COLOR["hunter-green"]
+                        and (color[0], color[1], color[2]) != constants.COLOR["auburn"]):
                         found_object = True
 
                         distance = self.__get_dist((x_line, y_line))

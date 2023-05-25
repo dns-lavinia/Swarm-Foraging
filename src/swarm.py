@@ -18,6 +18,7 @@ class SwarmState(Enum):
 
     # States used for the translation of the swarm
     TRANSLATION_INI = 3
+    TRANSLATION_STOP = 4
 
 
 class SwarmController:
@@ -115,14 +116,21 @@ class SwarmController:
                 self.robots[i].move(self.vtras)
             
             # Update the position of the swarm
-            new_x = self.position[0] + self.vtras * (1/constants.FPS) * math.cos(self.angle)
-            new_y = self.position[1] + self.vtras * (1/constants.FPS) * math.sin(self.angle)
+            new_x = self.position[0] + self.vtras * (3/constants.FPS) * math.cos(self.angle)
+            new_y = self.position[1] + self.vtras * (3/constants.FPS) * math.sin(self.angle)
             
             self.position = new_x, new_y
 
             # Movement finished
-            self.state = SwarmState.NONE
+            self.state = SwarmState.TRANSLATION_STOP
         
+        elif self.state == SwarmState.TRANSLATION_STOP:
+            for i in range(self.swarm_size):
+                self.robots[i].stop_move()
+
+            # Movement finished
+            self.state = SwarmState.NONE
+
         elif self.state == SwarmState.ROTATION_MOVE:
             finished_tras = 0
 

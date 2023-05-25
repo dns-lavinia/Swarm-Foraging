@@ -8,6 +8,7 @@ import pymunk.pygame_util
 
 # Local imports
 import constants
+import log
 
 from srobot import SRobot
 from swarm import SwarmController, SwarmState
@@ -48,6 +49,10 @@ class Simulation:
         # Add the homebase 
         self.goal_pos = self.get_homebase_pos()
 
+        # Initialize the logger 
+        self.logger = log.create_logger(name=self.__class__.__name__,
+                                        level=log.LOG_INFO)
+
         # Create every object in the simulation
         self.reset()
     
@@ -71,6 +76,18 @@ class Simulation:
                                      goal_pos=self.goal_pos)
 
         return self.__get_state_vars()
+    
+    def print_state_info(self, step):
+        """Print the terms returned by the step function."""
+
+        assert len(step) == 6, "The step information is not correctly formated."
+
+        self.logger.info(f"Dist from swarm to target: {step[0]}")
+        self.logger.info(f"Angle of swarm to target: {step[1]}")
+        self.logger.info(f"Dist from box to goal: {step[2]}")
+        self.logger.info(f"Angle of box to goal: {step[3]}")
+        self.logger.info(f"Rotation of the swarm: {step[4]}")
+        self.logger.info(f"Scaling of the swarm: {step[5]}")
 
     def step(self, action):
         """Advance the simulation one step given an action.
@@ -105,7 +122,7 @@ class Simulation:
             # Make the background green
             self.screen.fill(constants.COLOR["artichoke"])
 
-            # pygame.draw.circle(self.screen, [0, 255, 0], center=sim.swarm.position, radius=sim.swarm.f_sca)
+            pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
 
             self.space.debug_draw(self.draw_options)
 

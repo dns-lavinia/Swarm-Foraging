@@ -78,10 +78,12 @@ def run_episodes():
             
             # Run the simulation with the given action
             new_state, reward, done = sim.step(action)
+            sim.print_state_info(new_state)
+            logger.debug(f"The reward is: {reward}")
+
             new_state = np.reshape(new_state, [1, len(new_state)])
 
             logger.debug(f"The chosen action is {action}.")
-            # logger.debug(f"State is {state}, and the new state is {new_state}")
 
             target = reward \
                     + discount_factor * np.max(model.predict(state))
@@ -103,40 +105,6 @@ def run_episodes():
 
             # Update done
             done = done | (sim_steps <= 0) 
-
-            logger.debug("End of one iteration.")
-
-            ####################################################################
-            # Pygame dependent updates
-            ####################################################################
-            # Finish the execution of the game when a key/button is pressed
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    sys.exit(0)
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    sys.exit(0)
-
-            # Advance the simulation with one step
-            sim.space.step(1/constants.FPS) 
-
-            # Make the background green
-            sim.screen.fill(constants.COLOR["artichoke"])
-
-            # # Draw the homebase flag                            
-            # pygame.draw.polygon(surface=sim.screen, 
-            #                     color=constants.COLOR["auburn"], 
-            #                     points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
-
-            sim.space.debug_draw(sim.draw_options)
-
-            pygame.display.flip()
-
-            # advance time
-            sim.clock.tick(constants.FPS)
-
-            # TODO: delete this later
-            time.sleep(5)
-            ####################################################################
 
 
 def test_swarm_movement():

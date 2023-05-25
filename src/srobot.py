@@ -18,7 +18,7 @@ class SRobot:
     def __init__(self, space, start_pos, start_angle, goal_pos):
         # Create and save a logger for this class 
         self.logger = log.create_logger(name=self.__class__.__name__,
-                                        level=log.LOG_INFO)
+                                        level=log.LOG_DEBUG)
 
         # Save the space the robots are going to be placed in
         self.space = space
@@ -32,7 +32,9 @@ class SRobot:
                                           start_angle=start_angle)
 
         # Attach a LaserSensor to it
-        self.sensor = LaserSensor(position=start_pos, body_angle=self.body.angle)
+        self.sensor = LaserSensor(position=start_pos, body_angle=self.body.angle,
+                                  n_readings=32, start_angle=-90,
+                                  angle_space=6, range=400)
 
         # Attach the fuzzy controller to it
         self.flc = RobotFuzzySystem()
@@ -102,7 +104,7 @@ class SRobot:
         if abs(norm_self_angle - norm_angle) < 0.1:
             self.body.angular_velocity = 0
         else:
-            self.body.angular_velocity = direction * math.pi/5
+            self.body.angular_velocity = direction * math.pi/3
 
         self.space.step(1/constants.FPS)
 
@@ -130,7 +132,7 @@ class SRobot:
 
         return body
     
-    def get_velocities(self):
+    def get_velocities(self, target_pos, target_angle):
         """
         Returns:
             (float, float): Returns translational and roational velocities (in
@@ -148,17 +150,34 @@ class SRobot:
         # Get the minimum distance for readings of the right zone
         right_dist = min(distances[(2 * n // 3 + n%3) : n])
 
-        # Compute the distance to goal from the robot
-        dist = math.sqrt((self.body.position[0] - self.goal_pos[0]) ** 2  
-                         + (self.body.position[1] - self.goal_pos[1]) ** 2)
+        # Compute the distance to goal from the target object 
+        dist = math.sqrt((target_pos[0] - self.goal_pos[0]) ** 2  
+                         + (target_pos[1] - self.goal_pos[1]) ** 2)
         
+        # Compute the angle of the target object to the goal
+        # The value should be between -pi and pi
+        angle_to_goal = target_angle - math.atan2(self.goal_pos[0] - target_pos[0],
+                                                       self.goal_pos[1] - target_pos[1])
+        
+        # Normalize the angle 
+        angle_to_goal = self.__normalize_angle(angle_to_goal)
+
         # Save the new velocities
         self.vtras, self.vrot = self.flc.evaluate(inp_left=left_dist,
                                                   inp_front=front_dist,
                                                   inp_right=right_dist,
-                                                  inp_ang=self.body.angle,
+                                                  inp_ang=angle_to_goal,
                                                   inp_dist=dist)
         
+        self.logger.debug(f'Readings for the FLC: {[left_dist, front_dist, right_dist, angle_to_goal, dist]}')
         self.logger.debug(f'New velocities: vtras = {self.vtras}, vrot = {self.vrot}')
         
         return self.vtras, self.vrot
+    
+    def __normalize_angle(self, angle):
+        angle = angle % (2 * math.pi)
+
+        if angle > math.pi:
+            return math.pi - angle 
+    
+        return angle

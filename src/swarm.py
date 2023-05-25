@@ -34,13 +34,14 @@ class SwarmController:
 
     SWARM_RADIUS = 20  # in cm
 
-    def __init__(self, start_pos, start_angle, sim_space, goal_pos, *, swarm_size=SWARM_SIZE):
+    def __init__(self, start_pos, start_angle, sim_space, goal_pos, target, *, swarm_size=SWARM_SIZE):
         # Create and save the logger for this class
         self.logger = log.create_logger(name=self.__class__.__name__,
                                         level=log.LOG_INFO)
         
         self.space = sim_space
         self.goal_pos = goal_pos
+        self.target = target
 
         self.swarm_size = swarm_size
         self.position = start_pos
@@ -224,8 +225,8 @@ class SwarmController:
         sum_vrot = 0
         n = len(self.robots)
 
-        for i in range(len(self.robots)):
-            vtras, vrot = self.robots[i].get_velocities()
+        for i in range(self.swarm_size):
+            vtras, vrot = self.robots[i].get_velocities(self.target.body.position, self.target.body.angle)
 
             sum_vtras += vtras
             sum_vrot += vrot

@@ -14,7 +14,7 @@ from srobot import SRobot
 from swarm import SwarmController, SwarmState
 
 class Simulation:
-    OBSERVATION_SPACE_N = 6
+    OBSERVATION_SPACE_N = 5
     ACTION_SPACE_N = 2
 
     def __init__(self, screen_size=constants.SCREEN_SIZE):
@@ -73,22 +73,22 @@ class Simulation:
         self.swarm = SwarmController(start_pos=self.goal_pos, 
                                      start_angle=(-math.pi / 2),
                                      sim_space=self.space,
-                                     goal_pos=self.goal_pos)
+                                     goal_pos=self.goal_pos,
+                                     target=self.target)
 
         return self.__get_state_vars()
     
     def print_state_info(self, step):
         """Print the terms returned by the step function."""
 
-        assert len(step) == 6, "The step information is not correctly formated."
+        assert len(step) == self.OBSERVATION_SPACE_N, "The step information is not correctly formated."
 
         self.logger.info(f"Dist from swarm to target: {step[0]}")
         self.logger.info(f"Angle of swarm to target: {step[1]}")
         self.logger.info(f"Dist from box to goal: {step[2]}")
         self.logger.info(f"Angle of box to goal: {step[3]}")
         self.logger.info(f"Rotation of the swarm: {step[4]}")
-        self.logger.info(f"Scaling of the swarm: {step[5]}")
-
+    
     def step(self, action):
         """Advance the simulation one step given an action.
         
@@ -122,6 +122,9 @@ class Simulation:
             # Make the background green
             self.screen.fill(constants.COLOR["artichoke"])
 
+            # TODO: delete this later
+            # self.swarm.robots[0].sensor.draw_sensor_angles()
+
             pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
 
             self.space.debug_draw(self.draw_options)
@@ -152,7 +155,6 @@ class Simulation:
             [3] The distance of the box with respect to the goal \n
             [4] The angle of the box with respect to the goal \n
             [5] The rotation of the swarm \n
-            [6] The scaling factor of the swarm -> it is probably redundant atm. \n
         """
         
         # [1] Get the distance from the swarm to the target
@@ -160,19 +162,37 @@ class Simulation:
                                       pos2=self.target.body.position) 
 
         # [2] Get the angle from the swarm to the target 
-        angle_to_box = math.atan2(self.swarm.position[0] - self.target.body.position[0],
-                                  self.swarm.position[1] - self.target.body.position[1])
+        angle_to_box = self.swarm.angle - math.atan2(self.target.body.position[0] - self.swarm.position[0],
+                                                     self.target.body.position[1] - self.swarm.position[1])
+
+        # Normalize the angle 
+        angle_to_box = self.__normalize_angle(angle_to_box)
 
         # [3] Get the distance from the box to the goal
         dist_to_goal = self.__get_dist(pos1=self.target.body.position,
                                        pos2=self.goal_pos)
 
         # [4] Get the angle of the box to the goal
-        angle_to_goal = math.atan2(self.target.body.position[0] - self.goal_pos[0],
-                                   self.target.body.position[1] - self.goal_pos[1])
+        angle_to_goal = self.target.body.angle - math.atan2(self.goal_pos[0] - self.target.body.position[0],
+                                                            self.goal_pos[1] - self.target.body.position[1])
         
+        # Normalize the angle 
+        angle_to_goal = self.__normalize_angle(angle_to_goal)
+
+        # [5] The rotation of the swarm
+        # Normalize the rotation
+        rot_norm = self.__normalize_angle(self.swarm.angle)
+
         return [dist_to_box, angle_to_box, dist_to_goal, angle_to_goal, 
-                self.swarm.angle, self.swarm.f_sca] 
+                rot_norm] 
+    
+    def __normalize_angle(self, angle):
+        angle = angle % (2 * math.pi)
+
+        if angle > math.pi:
+            return math.pi - angle 
+    
+        return angle
 
     def __get_dist(self, pos1, pos2):
         """Based on 2 points in the simulation, get the distance between them."""
@@ -193,14 +213,14 @@ class Simulation:
         if self.target.point_query(self.goal_pos).distance < 0:
             return 100
         
-        dist_to_goal = self.__get_dist(self.swarm.position, self.target.body.position)
+        dist_to_goal = self.__get_dist(pos, self.target.body.position)
 
         if dist_to_goal > constants.SWARM_BOX_NEAR:
             # Check wether the swarm got closer to the target
             dist_last = self.__get_dist(last_pos, self.target.body.position)
             dist = self.__get_dist(pos, self.target.body.position)
 
-            if (dist_last - dist) > 0.0001:
+            if (dist_last - dist) > 1:
                 return 1
         
         else:
@@ -208,9 +228,8 @@ class Simulation:
             dist_last = self.__get_dist(last_target, self.goal_pos)
             dist = self.__get_dist(self.target.body.position, self.goal_pos)
 
-            if (dist_last - dist) > 0.0001:
-                return 1
-            return 5
+            if (dist_last - dist) > 1:
+                return 5
         
         # If none of the conditions above are met, then the reward is -1
         return -1
@@ -252,8 +271,8 @@ class Simulation:
         # if the position is not given
         if position is None:
             h, w = self.screen_size
-            x = random.randint(w - w/5, w - (w/5 - w/25))  # 400, 420
-            y = random.randint(w/5 - w/25, w/5 + w/25)  # 80, 120
+            x = random.randint(20, w - (w/5 - w/25))  # 400, 420
+            y = random.randint((w/5 - w/25), w/2)  # 80, 120
         else:
             x, y = position
 

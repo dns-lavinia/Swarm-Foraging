@@ -23,7 +23,7 @@ def create_nn():
     # 3, to represent vtras and vrot (I ignored the scaling part for now and
     # I assumed that the swarm is already in an optimal scaling from the beginning)
     model = Sequential()
-    model.add(Dense(64, activation="tanh", input_shape=(6,)))
+    model.add(Dense(64, activation="tanh", input_shape=(5,)))
     model.add(Dense(64, activation="tanh"))
     model.add(Dense(2, activation="linear")) # linear activation
 
@@ -36,29 +36,23 @@ def create_nn():
 def run_episodes():
     logger = log.create_logger(name="episodes",
                                level=log.LOG_DEBUG)
-    
-    logger.debug("Running all of the episodes.")
 
     # Initializing some constants but not only
     discount_factor = 0.95
     eps = 0.5
     eps_decay_factor = 0.999
-    n_episodes = 4
+    n_episodes = 20
 
     sim = Simulation()
     model = create_nn()
 
     # Get the position of the homebase to show it in the simulation
     goal_x, goal_y = sim.get_homebase_pos()
-
-    logger.debug("Before the simulation loop.")
         
     ########################################################################
     # REINFORCEMENT LEARNING ALGO
     ########################################################################
     for _ in range(n_episodes):
-        logger.debug("Episode started.")
-
         state = sim.reset()  # reset the environment 
         state = np.reshape(state, [1, len(state)])
 
@@ -79,11 +73,8 @@ def run_episodes():
             # Run the simulation with the given action
             new_state, reward, done = sim.step(action)
             sim.print_state_info(new_state)
-            logger.debug(f"The reward is: {reward}")
 
             new_state = np.reshape(new_state, [1, len(new_state)])
-
-            logger.debug(f"The chosen action is {action}.")
 
             target = reward \
                     + discount_factor * np.max(model.predict(state))

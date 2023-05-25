@@ -41,7 +41,7 @@ class LaserSensor:
         self.angle_space = angle_space  # Leave this amount of space between readings
 
         # Body dependent parameters
-        self.position = (position[0]+ 100, position[1])
+        self.position = (position[0]+100, position[1])
         self.sensor_angle = body_angle
         self.body_radius = body_radius
 
@@ -112,8 +112,8 @@ class LaserSensor:
             found_object = False
 
             # Along the line of the ray, check if there is any object 
-            for i in range(0, 100):
-                u = i / 100
+            for i in range(0, 150):
+                u = i / 150
 
                 # Get the position on the line
                 x_line = int((1-u) * pos_start[0] + u * x_fin)
@@ -126,8 +126,7 @@ class LaserSensor:
                     
                     # If the color is different from the background of the 
                     # screen, or the home base then an objstacle was found
-                    if ((color[0], color[1], color[2]) != constants.COLOR["hunter-green"]
-                        and (color[0], color[1], color[2]) != constants.COLOR["auburn"]):
+                    if (color[0], color[1], color[2]) == constants.COLOR["hunter-green"][:3]:
                         found_object = True
 
                         distance = self.__get_dist((x_line, y_line))
@@ -161,7 +160,7 @@ class LaserSensor:
             pos_fin = self.__get_fin_pos(angle, self.range)
 
             # Draw a red line representing the ray
-            pygame.draw.line(self.screen, (255, 0, 0), pos_start, pos_fin, 1)
+            pygame.draw.line(self.screen, (255, 0, 0), pos_start, pos_fin, 2)
     
     def __add_noise(self, distance, angle):
         """Return the distance and the angle of the detected object with noise

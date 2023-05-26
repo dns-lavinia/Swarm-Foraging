@@ -108,8 +108,9 @@ class SwarmController:
                     self.r_target_pos.append(new_pos)
 
                     # Stop the motion of the robot
-                    self.robots[i].body.velocity = 0, 0
-
+                    for i in range(self.swarm_size):
+                        await self.robots[i].stop_move()
+                    
                 self.state = SwarmState.ROTATION_MOVE
         
         elif self.state == SwarmState.TRANSLATION_INI:
@@ -177,12 +178,6 @@ class SwarmController:
             for i in range(self.swarm_size):
                 norm_angle = self.angle % (2 * math.pi)
                 norm_robot_angle = self.robots[i].body.angle % (2 * math.pi)
-
-                if norm_angle < 0:
-                    norm_angle = 2 * math.pi - norm_angle
-                
-                if norm_robot_angle < 0:
-                    norm_robot_angle = 2 * math.pi - norm_robot_angle 
                 
                 if abs(norm_robot_angle - norm_angle) > 0.1:
                     await self.robots[i].rotate_to(self.angle, self.r_dir[i])

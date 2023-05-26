@@ -300,7 +300,8 @@ class Simulation:
         shape = pymunk.Poly.create_box(body, (length, length), 0.0)
         shape.color = constants.COLOR["hunter-green"]
         shape.mass = mass  # mass in kg
-        shape.friction = 1  
+        shape.friction = 1
+        shape.elasticity = 0.2
 
         # Add the target object to the space
         self.space.add(body, shape)

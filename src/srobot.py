@@ -40,7 +40,7 @@ class SRobot:
         # Add vtras and vrot variables 
         self.vtras = 0
         self.vrot = 0
-
+    
     async def move(self, vtras):
         self.space.step(1/constants.FPS)
 
@@ -123,6 +123,7 @@ class SRobot:
         # Add the attributes of the robot's body
         shape.mass = self.MASS
         shape.friction = 1
+        shape.elasticity = 0.5
         shape.color = constants.COLOR["grey"]
 
         # Add the body to the space
@@ -172,7 +173,7 @@ class SRobot:
         
         self.logger.debug(f'Readings for the FLC: {[left_dist, front_dist, right_dist, angle_to_goal, dist]}')
         self.logger.debug(f'New velocities: vtras = {self.vtras}, vrot = {self.vrot}')
-        
+
         return self.vtras, self.vrot
     
     def __normalize_angle(self, angle):

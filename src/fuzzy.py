@@ -205,19 +205,11 @@ class RobotFuzzySystem:
 
         # Fuzzy set representing the angle of the robot itself relative to the goal
         self.ang = DomainModified(name="Angle of robot", low=-3.2, high=3.2, res=0.1)
-        self.ang.farl = linear(m=-1.0/2.4, b=-0.8/2.4)
+        self.ang.farl = linear(m=-1.0/2.8, b=-0.4/2.8)
         self.ang.medl = triangular(low=-1.2, high=0)
         self.ang.near = triangular(low=-0.1, high=0.1)
         self.ang.medr = triangular(low=0, high=1.2)
-        self.ang.farr = linear(m=1.0/2.4, b=-0.8/2.4)
-
-        # Last reading of lang 
-        self.lang = DomainModified(name="Angle of robot", low=-3.2, high=3.2, res=0.1)
-        self.lang.farl = linear(m=-1.0/2.4, b=-0.8/2.4)
-        self.lang.medl = triangular(low=-1.2, high=0)
-        self.lang.near = triangular(low=-0.1, high=0.1)
-        self.lang.medr = triangular(low=0, high=1.2)
-        self.lang.farr = linear(m=1.0/2.4, b=-0.8/2.4)
+        self.ang.farr = linear(m=1.0/2.8, b=-0.4/2.8)
 
         # Fuzzy set representing the rotational speed
         self.vrot = DomainModified(name="Rotational speed", low=-2.0, high=2.0, res=0.1)
@@ -260,7 +252,7 @@ class RobotFuzzySystem:
         """
 
         return {
-            (self.left.emer, self.right.emer, self.front.emer) : self.vrot.right,
+            # (self.left.emer, self.right.emer, self.front.emer) : self.vrot.right,
             (self.left.emer, self.right.emer, self.front.far) : self.vrot.none,
             (self.left.emer, self.right.far) : self.vrot.hright,
             (self.right.emer, self.left.far, self.front.far) : self.vrot.hleft,
@@ -325,6 +317,8 @@ class RobotFuzzySystem:
         rules_vrot = RuleModified((rendevous_rules_vrot | avoidance_rules))
         rules_vtrans = RuleModified(rendevous_rules_vtrans)
 
+        vtras = rules_vtrans(input_data, method="tagaki-sugeno-0")
+        vrot = rules_vrot(input_data, method="tagaki-sugeno-0")
+
         # Returned the defuzzified results separate for vtrans and vrot
-        return rules_vtrans(input_data, method="tagaki-sugeno-0"), \
-               rules_vrot(input_data, method="tagaki-sugeno-0")
+        return vtras, vrot

@@ -150,7 +150,7 @@ class SwarmController:
             if finished_tras == self.swarm_size:
                 # Update the angle of the swarm
                 self.set_angle(new_angle=(self.angle 
-                                        + self.get_sign(self.vrot) * self.ROT_ANGLE))
+                                          + self.get_sign(self.vrot) * self.ROT_ANGLE))
                 
                 # Save the optimal direction that each robot should rotate at
                 self.r_dir = []
@@ -223,10 +223,10 @@ class SwarmController:
         
         sum_vtras = 0
         sum_vrot = 0
-        n = len(self.robots)
+        n = self.swarm_size
 
         for i in range(self.swarm_size):
-            vtras, vrot = self.robots[i].get_velocities(self.target.body.position, self.target.body.angle)
+            vtras, vrot = self.robots[i].get_velocities(self.target.body.position)
 
             sum_vtras += vtras
             sum_vrot += vrot

@@ -14,12 +14,10 @@ from fuzzy import RobotFuzzySystem
 class SRobot: 
     MASS = 0.65  # kg
     RADIUS = 10  # cm
+    logger =  log.create_logger(name="Robot",
+                                level=log.LOG_DEBUG)
 
     def __init__(self, space, start_pos, start_angle, goal_pos):
-        # Create and save a logger for this class 
-        self.logger = log.create_logger(name=self.__class__.__name__,
-                                        level=log.LOG_DEBUG)
-
         # Save the space the robots are going to be placed in
         self.space = space
 
@@ -132,7 +130,7 @@ class SRobot:
 
         return body
     
-    def get_velocities(self, target_pos, target_angle):
+    def get_velocities(self, target_pos):
         """
         Returns:
             (float, float): Returns translational and roational velocities (in
@@ -151,14 +149,17 @@ class SRobot:
         right_dist = min(distances[(2 * n // 3 + n%3) : n])
 
         # Compute the distance to goal from the target object 
-        dist = math.sqrt((target_pos[0] - self.goal_pos[0]) ** 2  
-                         + (target_pos[1] - self.goal_pos[1]) ** 2)
+        dist = math.sqrt((self.body.position[0] - target_pos[0]) ** 2  
+                         + (self.body.position[1] - target_pos[1]) ** 2)
         
         # Compute the angle of the target object to the goal
         # The value should be between -pi and pi
-        angle_to_goal = target_angle - math.atan2(self.goal_pos[0] - target_pos[0],
-                                                       self.goal_pos[1] - target_pos[1])
+        angle_to_goal = self.body.angle - math.atan2(target_pos[0] - self.body.position[0],
+                                                     target_pos[1] - self.body.position[1])
         
+        self.logger.debug(f"The angle of the robot is {self.body.angle}")
+        self.logger.debug(f"The non normalized angle is {angle_to_goal}")
+
         # Normalize the angle 
         angle_to_goal = self.__normalize_angle(angle_to_goal)
 
@@ -175,9 +176,9 @@ class SRobot:
         return self.vtras, self.vrot
     
     def __normalize_angle(self, angle):
-        angle = angle % (2 * math.pi)
+        angle = angle % (2 * math.pi)  # It is always a positive number
 
         if angle > math.pi:
-            return math.pi - angle 
+            return -1 * (2 * math.pi - angle)
     
         return angle

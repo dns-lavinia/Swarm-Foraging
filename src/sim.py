@@ -123,7 +123,7 @@ class Simulation:
             self.screen.fill(constants.COLOR["artichoke"])
 
             # TODO: delete this later
-            # self.swarm.robots[0].sensor.draw_sensor_angles()
+            self.swarm.robots[0].sensor.draw_sensor_angles()
 
             pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
 
@@ -141,11 +141,32 @@ class Simulation:
         reward = self.__get_reward(last_pos, self.swarm.position, last_target)
 
         # Check if the swarm managed to bring the target food object into the nest
-        done = True if (self.target.point_query(self.goal_pos).distance < 0) else False 
+        done = self.__get_done_status()
 
         new_state = self.__get_state_vars()
 
         return new_state, reward, done
+    
+    def __get_done_status(self):
+        """Stop conditions for the current simulation. There are two main conditions:
+        (1) All of the robots must be visible on the map.
+        (2) The target food box arrived in the home base.
+        """
+
+        outsider = 0
+
+        # Check if the robots of the swarm are still on the board
+        for i in range(self.swarm.swarm_size):
+            if self.swarm.robots[i].body.position[0] < 0 or self.swarm.robots[i].body.position[0] > self.screen_size[0]:
+                outsider += 1
+
+            elif self.swarm.robots[i].body.position[1] < 0 or self.swarm.robots[i].body.position[1] > self.screen_size[1]:
+                outsider += 1
+
+        if outsider == self.swarm.swarm_size:
+            return True 
+        else:
+            return True if (self.target.point_query(self.goal_pos).distance < 0) else False 
     
     def __get_state_vars(self):
         """Returns a tuple containing the relevant information for the learning
@@ -187,10 +208,12 @@ class Simulation:
                 rot_norm] 
     
     def __normalize_angle(self, angle):
-        angle = angle % (2 * math.pi)
+        """Returns an angle between -pi and pi."""
+
+        angle = angle % (2 * math.pi)  # It is always a positive number
 
         if angle > math.pi:
-            return math.pi - angle 
+            return -1 * (2 * math.pi - angle)
     
         return angle
 
@@ -220,15 +243,14 @@ class Simulation:
             dist_last = self.__get_dist(last_pos, self.target.body.position)
             dist = self.__get_dist(pos, self.target.body.position)
 
-            if (dist_last - dist) > 1:
+            if (dist_last - dist) > constants.MIN_DIST_CHANGE:
                 return 1
-        
         else:
             # Check wether the food object got closer to the goal
             dist_last = self.__get_dist(last_target, self.goal_pos)
             dist = self.__get_dist(self.target.body.position, self.goal_pos)
 
-            if (dist_last - dist) > 1:
+            if (dist_last - dist) > constants.MIN_DIST_CHANGE:
                 return 5
         
         # If none of the conditions above are met, then the reward is -1
@@ -271,8 +293,8 @@ class Simulation:
         # if the position is not given
         if position is None:
             h, w = self.screen_size
-            x = random.randint(20, w - (w/5 - w/25))  # 400, 420
-            y = random.randint((w/5 - w/25), w/2)  # 80, 120
+            x = random.randint(w/5, w - (2 * w/5))  # 50, 420
+            y = random.randint((w/5 + w/25), w/2)  # 120, 250
         else:
             x, y = position
 

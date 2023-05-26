@@ -89,7 +89,7 @@ class Simulation:
         self.logger.info(f"Angle of box to goal: {step[3]}")
         self.logger.info(f"Rotation of the swarm: {step[4]}")
     
-    def step(self, action):
+    async def step(self, action):
         """Advance the simulation one step given an action.
         
         Args:
@@ -104,7 +104,7 @@ class Simulation:
         last_target = self.target.body.position  # Save the last position of the target
 
         # Perform the given action
-        self.swarm.run(action)
+        await self.swarm.run(action)
 
         while self.swarm.state != SwarmState.NONE:
             # Finish the execution of the game when a key/button is pressed
@@ -117,7 +117,7 @@ class Simulation:
             # Advance the simulation with one step
             self.space.step(1/constants.FPS) 
 
-            self.swarm.run()
+            await self.swarm.run()
 
             # Make the background green
             self.screen.fill(constants.COLOR["artichoke"])
@@ -153,20 +153,15 @@ class Simulation:
         (2) The target food box arrived in the home base.
         """
 
-        outsider = 0
-
         # Check if the robots of the swarm are still on the board
         for i in range(self.swarm.swarm_size):
             if self.swarm.robots[i].body.position[0] < 0 or self.swarm.robots[i].body.position[0] > self.screen_size[0]:
-                outsider += 1
+                return True
 
             elif self.swarm.robots[i].body.position[1] < 0 or self.swarm.robots[i].body.position[1] > self.screen_size[1]:
-                outsider += 1
+                return True
 
-        if outsider == self.swarm.swarm_size:
-            return True 
-        else:
-            return True if (self.target.point_query(self.goal_pos).distance < 0) else False 
+        return True if (self.target.point_query(self.goal_pos).distance < 0) else False 
     
     def __get_state_vars(self):
         """Returns a tuple containing the relevant information for the learning
@@ -187,7 +182,7 @@ class Simulation:
                                                      self.target.body.position[1] - self.swarm.position[1])
 
         # Normalize the angle 
-        angle_to_box = self.__normalize_angle(angle_to_box)
+        angle_to_box = -1 * self.__normalize_angle(angle_to_box)
 
         # [3] Get the distance from the box to the goal
         dist_to_goal = self.__get_dist(pos1=self.target.body.position,
@@ -198,7 +193,7 @@ class Simulation:
                                                             self.goal_pos[1] - self.target.body.position[1])
         
         # Normalize the angle 
-        angle_to_goal = self.__normalize_angle(angle_to_goal)
+        angle_to_goal = -1 * self.__normalize_angle(angle_to_goal)
 
         # [5] The rotation of the swarm
         # Normalize the rotation
@@ -276,7 +271,7 @@ class Simulation:
         
         return robots
 
-    def add_target(self, mass=1, length=20, position=None):
+    def add_target(self, mass=5, length=20, position=None):
         """Create and add to the space of the simulation the target object that
         is to be carried by the robots to the home base. The shape of the target
         object will be a square.

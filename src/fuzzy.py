@@ -203,13 +203,21 @@ class RobotFuzzySystem:
         self.dist.med = triangular(low=30, high=200)
         self.dist.far = linear(m=3240.0/182, b=-18.0/182)
 
-        # Fuzzy set representing the angle of the robot itself
+        # Fuzzy set representing the angle of the robot itself relative to the goal
         self.ang = DomainModified(name="Angle of robot", low=-3.2, high=3.2, res=0.1)
-        self.ang.farl = linear(m=-1.0/2.8, b=-0.4/2.8)
+        self.ang.farl = linear(m=-1.0/2.4, b=-0.8/2.4)
         self.ang.medl = triangular(low=-1.2, high=0)
         self.ang.near = triangular(low=-0.1, high=0.1)
         self.ang.medr = triangular(low=0, high=1.2)
-        self.ang.farr = linear(m=1.0/2.8, b=-0.4/2.8)
+        self.ang.farr = linear(m=1.0/2.4, b=-0.8/2.4)
+
+        # Last reading of lang 
+        self.lang = DomainModified(name="Angle of robot", low=-3.2, high=3.2, res=0.1)
+        self.lang.farl = linear(m=-1.0/2.4, b=-0.8/2.4)
+        self.lang.medl = triangular(low=-1.2, high=0)
+        self.lang.near = triangular(low=-0.1, high=0.1)
+        self.lang.medr = triangular(low=0, high=1.2)
+        self.lang.farr = linear(m=1.0/2.4, b=-0.8/2.4)
 
         # Fuzzy set representing the rotational speed
         self.vrot = DomainModified(name="Rotational speed", low=-2.0, high=2.0, res=0.1)

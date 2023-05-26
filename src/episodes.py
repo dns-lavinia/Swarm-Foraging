@@ -2,6 +2,7 @@ import math  # TODO: delete this later
 import time
 import random
 import sys
+import asyncio
 import os 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress tensorflow warnings
 
@@ -121,7 +122,7 @@ class DQN:
         self.target_network.set_weights(self.main_network.get_weights())
 
 # Source: https://github.com/PacktPublishing/Deep-Reinforcement-Learning-with-Python/
-def run_episodes_enhanced():
+async def run_episodes_enhanced():
     num_episodes = 24
     num_timesteps = 700
     batch_size = 8
@@ -157,7 +158,7 @@ def run_episodes_enhanced():
             action = dqn.epsilon_greedy(state)
             
             #perform the selected action
-            next_state, reward, done = sim.step(action)
+            next_state, reward, done = await sim.step(action)
             next_state = np.reshape(next_state, [1, len(next_state)])
             
             #store the transition information
@@ -179,7 +180,7 @@ def run_episodes_enhanced():
             if len(dqn.replay_buffer) > batch_size:
                 dqn.train(batch_size)
 
-def run_episodes():
+async def run_episodes():
     logger = log.create_logger(name="episodes",
                                level=log.LOG_DEBUG)
 
@@ -218,9 +219,9 @@ def run_episodes():
                 action = np.argmax(model.predict(state))
             
             logger.debug(f"[CURRENT ACTION: {action}]")
-            
+
             # Run the simulation with the given action
-            new_state, reward, done = sim.step(action)
+            new_state, reward, done = await sim.step(action)
 
             sim.print_state_info(new_state)
             logger.debug(f"The current reward is {reward}")
@@ -252,5 +253,5 @@ def run_episodes():
             # time.sleep(7)
 
 if __name__ == "__main__":
-    run_episodes()
-    # run_episodes_enhanced()
+    asyncio.run(run_episodes())
+    # asyncio.run(run_episodes_enhanced())

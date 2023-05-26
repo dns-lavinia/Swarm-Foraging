@@ -30,7 +30,7 @@ class SwarmController:
 
     # The angle that the swarm has to change when given the action to rotate. 
     # The direction of the rotation has to be given by vrot.
-    ROT_ANGLE = math.pi / 10
+    ROT_ANGLE = math.pi / 5
 
     SWARM_RADIUS = 20  # in cm
 
@@ -64,7 +64,7 @@ class SwarmController:
         # Upon initialization, the swarm isn't performing any action
         self.state = SwarmState.NONE
 
-    def run(self, action=None):
+    async def run(self, action=None):
         """The main body that drives the swarm. Can give an optional argument 
         which denotes the action to take (move the swarm linearly, rotate the
         swarm or scale it). If the swarm is already processing an action it will
@@ -114,7 +114,7 @@ class SwarmController:
         
         elif self.state == SwarmState.TRANSLATION_INI:
             for i in range(self.swarm_size):
-                self.robots[i].move(self.vtras)
+                await self.robots[i].move(self.vtras)
             
             # Update the position of the swarm
             new_x = self.position[0] + self.vtras * (3/constants.FPS) * math.cos(self.angle)
@@ -127,7 +127,7 @@ class SwarmController:
         
         elif self.state == SwarmState.TRANSLATION_STOP:
             for i in range(self.swarm_size):
-                self.robots[i].stop_move()
+                await self.robots[i].stop_move()
 
             # Movement finished
             self.state = SwarmState.NONE
@@ -140,9 +140,9 @@ class SwarmController:
                 dist = (self.robots[i].body.position - self.r_target_pos[i]).get_length_sqrd()
 
                 if dist >= 0.5 ** 2:
-                    self.robots[i].move_to(target_pos=self.r_target_pos[i])
+                    await self.robots[i].move_to(target_pos=self.r_target_pos[i])
                 else:
-                    self.robots[i].body.velocity = 0, 0
+                    await self.robots[i].stop_move()
                     finished_tras += 1
                     
             # If all of the robots finished moving to their designated position
@@ -157,12 +157,6 @@ class SwarmController:
                 for i in range(self.swarm_size):
                     norm_angle = self.angle % (2 * math.pi)
                     norm_robot_angle = self.robots[i].body.angle % (2 * math.pi)
-
-                    if norm_angle < 0:
-                        norm_angle = 2 * math.pi - norm_angle
-                    
-                    if norm_robot_angle < 0:
-                        norm_robot_angle = 2 * math.pi - norm_robot_angle 
 
                     diff1 = norm_angle - norm_robot_angle
                     diff2 = norm_robot_angle - norm_angle
@@ -191,9 +185,9 @@ class SwarmController:
                     norm_robot_angle = 2 * math.pi - norm_robot_angle 
                 
                 if abs(norm_robot_angle - norm_angle) > 0.1:
-                    self.robots[i].rotate_to(self.angle, self.r_dir[i])
+                    await self.robots[i].rotate_to(self.angle, self.r_dir[i])
                 else: 
-                    self.robots[i].body.angular_velocity = 0
+                    await self.robots[i].stop_move()
                     finished_rot += 1
 
             if finished_rot == self.swarm_size:

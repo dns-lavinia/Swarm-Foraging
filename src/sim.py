@@ -178,22 +178,22 @@ class Simulation:
                                       pos2=self.target.body.position) 
 
         # [2] Get the angle from the swarm to the target 
-        angle_to_box = self.swarm.angle - math.atan2(self.target.body.position[0] - self.swarm.position[0],
-                                                     self.target.body.position[1] - self.swarm.position[1])
+        angle_to_box = self.swarm.angle - math.atan2(self.target.body.position[1] - self.swarm.position[1],
+                                                     self.target.body.position[0] - self.swarm.position[0])
 
         # Normalize the angle 
-        angle_to_box = -1 * self.__normalize_angle(angle_to_box)
+        angle_to_box = self.__normalize_angle(angle_to_box)
 
         # [3] Get the distance from the box to the goal
         dist_to_goal = self.__get_dist(pos1=self.target.body.position,
                                        pos2=self.goal_pos)
 
         # [4] Get the angle of the box to the goal
-        angle_to_goal = self.target.body.angle - math.atan2(self.goal_pos[0] - self.target.body.position[0],
-                                                            self.goal_pos[1] - self.target.body.position[1])
+        angle_to_goal = self.target.body.angle - math.atan2(self.goal_pos[1] - self.target.body.position[1],
+                                                            self.goal_pos[0] - self.target.body.position[0])
         
         # Normalize the angle 
-        angle_to_goal = -1 * self.__normalize_angle(angle_to_goal)
+        angle_to_goal = self.__normalize_angle(angle_to_goal)
 
         # [5] The rotation of the swarm
         # Normalize the rotation

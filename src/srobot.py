@@ -15,7 +15,7 @@ class SRobot:
     MASS = 0.65  # kg
     RADIUS = 10  # cm
     logger =  log.create_logger(name="Robot",
-                                level=log.LOG_DEBUG)
+                                level=log.LOG_INFO)
 
     def __init__(self, space, start_pos, start_angle, goal_pos):
         # Save the space the robots are going to be placed in
@@ -155,14 +155,14 @@ class SRobot:
         
         # Compute the angle of the target object to the goal
         # The value should be between -pi and pi
-        angle_to_goal = self.body.angle - math.atan2(target_pos[0] - self.body.position[0],
-                                                     target_pos[1] - self.body.position[1])
+        angle_to_goal = self.body.angle - math.atan2(target_pos[1] - self.body.position[1],
+                                                     target_pos[0] - self.body.position[0])
         
         self.logger.debug(f"The angle of the robot is {self.body.angle}")
         self.logger.debug(f"The non normalized angle is {angle_to_goal}")
 
         # Normalize the angle 
-        angle_to_goal = -1 * self.__normalize_angle(angle_to_goal)
+        angle_to_goal = self.__normalize_angle(angle_to_goal)
 
         # Save the new velocities
         self.vtras, self.vrot = self.flc.evaluate(inp_left=left_dist,

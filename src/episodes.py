@@ -182,7 +182,7 @@ async def run_episodes_enhanced():
 
 async def run_episodes():
     logger = log.create_logger(name="episodes",
-                               level=log.LOG_DEBUG)
+                               level=log.LOG_INFO)
 
     # Initializing some constants but not only
     discount_factor = 0.95

@@ -123,7 +123,7 @@ class SRobot:
         # Add the attributes of the robot's body
         shape.mass = self.MASS
         shape.friction = 1
-        shape.elasticity = 0.5
+        shape.body.damping = 0.99
         shape.color = constants.COLOR["grey"]
 
         # Add the body to the space

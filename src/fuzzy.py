@@ -327,21 +327,9 @@ class RobotFuzzySystem:
             rule_updated = antecedents + (self.dist.far, self.dist.med,)
             avoidance_rules[rule_updated] = consequent
         
-        rules_vrot = RuleModified((rendevous_rules_vrot | avoidance_rules))
         rules_vtrans = RuleModified(rendevous_rules_vtrans)
-
-        print(f"Input data for FLC is:")
-        print(f"\t left: {inp_left}")
-        print(f"\t front: {inp_front}")
-        print(f"\t right: {inp_right}")
-        print(f"\t ang: {inp_ang}")
-
-
-        vtras = rules_vtrans(input_data, method="tagaki-sugeno-0")
-        vrot = rules_vrot(input_data, method="tagaki-sugeno-0")
-
-        print(f"The resulted vrot is {vrot}")
-        print("\n")
+        rules_vrot = RuleModified((rendevous_rules_vrot | avoidance_rules))
 
         # Returned the defuzzified results separate for vtrans and vrot
-        return vtras, vrot
+        return rules_vtrans(input_data, method="tagaki-sugeno-0"), \
+                rules_vrot(input_data, method="tagaki-sugeno-0")

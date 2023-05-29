@@ -223,7 +223,7 @@ async def run_episodes():
             # Run the simulation with the given action
             new_state, reward, done = await sim.step(action)
 
-            sim.print_state_info(new_state)
+            # sim.print_state_info(new_state)
             logger.debug(f"The current reward is {reward}")
 
             new_state = np.reshape(new_state, [1, len(new_state)])
@@ -248,9 +248,6 @@ async def run_episodes():
 
             # Update done
             done = done | (sim_steps <= 0) 
-
-            # TODO: delete this later
-            # time.sleep(7)
 
 if __name__ == "__main__":
     asyncio.run(run_episodes())

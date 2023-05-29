@@ -16,6 +16,7 @@ from swarm import SwarmController, SwarmState
 class Simulation:
     OBSERVATION_SPACE_N = 5
     ACTION_SPACE_N = 2
+    DAMPING = 0.05
 
     def __init__(self, screen_size=constants.SCREEN_SIZE):
         """Initialize the simulation.
@@ -41,7 +42,10 @@ class Simulation:
         # this whole screen and would have a dimension equal to the one
         # specified above
         self.space = pymunk.Space()
-        self.space.gravity = (0.0, 0.0)
+
+        # Set the damping of the space. This toggle is a quick solution to the 
+        # problem of the target object moving infinitely after a collision
+        self.space.damping = self.DAMPING
     
         # Declare the optional attributes of the space
         self.draw_options = pymunk.pygame_util.DrawOptions(self.screen)
@@ -62,9 +66,6 @@ class Simulation:
         # Remove all bodies from the space
         for shape in self.space.shapes:
             self.space.remove(shape)
-
-        # Add the boundary again
-        # self.__add_boundary()
 
         # Add the target again
         self.target = self.add_target()
@@ -121,9 +122,6 @@ class Simulation:
 
             # Make the background green
             self.screen.fill(constants.COLOR["artichoke"])
-
-            # TODO: delete this later
-            self.swarm.robots[0].sensor.draw_sensor_angles()
 
             pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
 
@@ -298,10 +296,10 @@ class Simulation:
 
         # Add a square shape for the target
         shape = pymunk.Poly.create_box(body, (length, length), 0.0)
+
         shape.color = constants.COLOR["hunter-green"]
         shape.mass = mass  # mass in kg
-        shape.friction = 1
-        shape.elasticity = 0.2
+        shape.friction = 0.9
 
         # Add the target object to the space
         self.space.add(body, shape)

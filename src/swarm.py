@@ -64,7 +64,10 @@ class SwarmController:
         # Upon initialization, the swarm isn't performing any action
         self.state = SwarmState.NONE
 
-    async def run(self, action=None):
+        # At first, the task is to get the swarm to go to the object
+        self.task = 1
+
+    async def run(self, action=None, task=None):
         """The main body that drives the swarm. Can give an optional argument 
         which denotes the action to take (move the swarm linearly, rotate the
         swarm or scale it). If the swarm is already processing an action it will
@@ -77,6 +80,9 @@ class SwarmController:
         
         assert (action in [0, 1, 2] or action is None), \
                 "[Simulation.step] Given action is not recognized"
+        
+        if task is not None:
+            self.task = task
 
         # Print a message in the case there is a given action and the swarm is 
         # already processing something else
@@ -158,17 +164,9 @@ class SwarmController:
                 for i in range(self.swarm_size):
                     norm_angle = self.angle % (2 * math.pi)
                     norm_robot_angle = self.robots[i].body.angle % (2 * math.pi)
+                    diff = (norm_angle - norm_robot_angle) % (2 * math.pi)
 
-                    diff1 = norm_angle - norm_robot_angle
-                    diff2 = norm_robot_angle - norm_angle
-
-                    if diff1 < 0:
-                        diff1 = 2 * math.pi - diff1 
-                    
-                    if diff2 < 0:
-                        diff2 = 2 * math.pi - diff2
-
-                    self.r_dir.append(1 if diff1 < diff2 else -1)
+                    self.r_dir.append(1 if diff < math.pi else -1)
         
                 self.state = SwarmState.ROTATION_ROT
 
@@ -187,6 +185,11 @@ class SwarmController:
 
             if finished_rot == self.swarm_size:
                 self.state = SwarmState.NONE
+
+    def set_task(self, task):
+        assert (task == 1 or task == 2), f"The task {task} is not recongized"
+        
+        self.task = task
 
     def set_angle(self, new_angle):
         self.angle = new_angle
@@ -214,8 +217,8 @@ class SwarmController:
         sum_vrot = 0
         n = self.swarm_size
 
-        for i in range(self.swarm_size):
-            vtras, vrot = self.robots[i].get_velocities(self.target.body.position)
+        for i in range(n):
+            vtras, vrot = self.robots[i].get_velocities(self.target.body.position, self.task)
 
             sum_vtras += vtras
             sum_vrot += vrot

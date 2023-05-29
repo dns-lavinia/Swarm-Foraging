@@ -89,11 +89,14 @@ class LaserSensor:
         self.position = pos
         self.sensor_angle = angle
     
-    def get_reading(self):
+    def get_reading(self, obj_color):
         """Perform all of the angular readings along the sensor's axis and check 
         if an object was found.
         
-        Returns a list containing all angular readings."""
+        Returns a list containing all angular readings.
+        
+        Args:
+            obj_color (str): The color of the object to detect."""
         
         arena_w, arena_h = self.screen.get_size()
         readings = []
@@ -126,7 +129,7 @@ class LaserSensor:
                     
                     # If the color is different from the background of the 
                     # screen, or the home base then an objstacle was found
-                    if (color[0], color[1], color[2]) == constants.COLOR["hunter-green"][:3]:
+                    if (color[0], color[1], color[2]) == obj_color:
                         found_object = True
 
                         distance = self.__get_dist((x_line, y_line))

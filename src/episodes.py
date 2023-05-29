@@ -182,7 +182,7 @@ async def run_episodes_enhanced():
 
 async def run_episodes():
     logger = log.create_logger(name="episodes",
-                               level=log.LOG_INFO)
+                               level=log.LOG_DEBUG)
 
     # Initializing some constants but not only
     discount_factor = 0.95
@@ -223,7 +223,7 @@ async def run_episodes():
             # Run the simulation with the given action
             new_state, reward, done = await sim.step(action)
 
-            # sim.print_state_info(new_state)
+            sim.print_state_info(new_state)
             logger.debug(f"The current reward is {reward}")
 
             new_state = np.reshape(new_state, [1, len(new_state)])

@@ -123,14 +123,18 @@ class Simulation:
             # Make the background green
             self.screen.fill(constants.COLOR["artichoke"])
 
-            pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
+            # TODO: delete this later
+            self.swarm.robots[0].sensor.draw_sensor_angles()
+
+            # pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
 
             self.space.debug_draw(self.draw_options)
 
-            # Draw the homebase flag                            
-            # pygame.draw.polygon(surface=sim.screen, 
-            #                     color=constants.COLOR["auburn"], 
-            #                     points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
+            # Draw the homebase flag     
+            goal_x, goal_y = self.goal_pos                   
+            pygame.draw.polygon(surface=self.screen, 
+                                color=constants.COLOR["auburn"], 
+                                points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
         
             pygame.display.flip()
             self.clock.tick(constants.FPS)
@@ -239,6 +243,9 @@ class Simulation:
             if (dist_last - dist) > constants.MIN_DIST_CHANGE:
                 return 1
         else:
+            # Update the task 
+            self.swarm.task = 2
+
             # Check wether the food object got closer to the goal
             dist_last = self.__get_dist(last_target, self.goal_pos)
             dist = self.__get_dist(self.target.body.position, self.goal_pos)

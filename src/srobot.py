@@ -15,7 +15,7 @@ class SRobot:
     MASS = 0.65  # kg
     RADIUS = 10  # cm
     logger =  log.create_logger(name="Robot",
-                                level=log.LOG_INFO)
+                                level=log.LOG_DEBUG)
 
     def __init__(self, space, start_pos, start_angle, goal_pos):
         # Save the space the robots are going to be placed in
@@ -36,10 +36,6 @@ class SRobot:
 
         # Attach the fuzzy controller to it
         self.flc = RobotFuzzySystem()
-
-        # Add vtras and vrot variables 
-        self.vtras = 0
-        self.vrot = 0
     
     async def move(self, vtras):
         self.space.step(1/constants.FPS)
@@ -131,13 +127,26 @@ class SRobot:
 
         return body
     
-    def get_velocities(self, target_pos):
+    def get_velocities(self, target_pos, task=1):
         """
+        Args:
+            task (int): The task to be considered by FLC. Can be either 1 or 2.
+            If task == 1, then then the target is considered to be the food 
+            object. If task == 2, then the target is considered to be the home
+            base.
+
         Returns:
             (float, float): Returns translational and roational velocities (in
             this order) once they are computed by the FLC.
         """
-        distances = self.sensor.get_reading()
+
+        assert (task == 1 or task == 2), "Task not recongized"
+
+        if task == 1:
+            distances = self.sensor.get_reading(obj_color=constants.COLOR["hunter-green"][:3])
+        elif task == 2:
+            distances = self.sensor.get_reading(obj_color=constants.COLOR["auburn"])
+
         n = len(distances)
 
         # Get the minimum distance for readings of the left zone
@@ -157,24 +166,21 @@ class SRobot:
         # The value should be between -pi and pi
         angle_to_goal = self.body.angle - math.atan2(target_pos[1] - self.body.position[1],
                                                      target_pos[0] - self.body.position[0])
-        
-        self.logger.debug(f"The angle of the robot is {self.body.angle}")
-        self.logger.debug(f"The non normalized angle is {angle_to_goal}")
 
         # Normalize the angle 
         angle_to_goal = self.__normalize_angle(angle_to_goal)
 
         # Save the new velocities
-        self.vtras, self.vrot = self.flc.evaluate(inp_left=left_dist,
-                                                  inp_front=front_dist,
-                                                  inp_right=right_dist,
-                                                  inp_ang=angle_to_goal,
-                                                  inp_dist=dist)
+        vtras, vrot = self.flc.evaluate(inp_left=left_dist,
+                                        inp_front=front_dist,
+                                        inp_right=right_dist,
+                                        inp_ang=angle_to_goal,
+                                        inp_dist=dist)
         
         self.logger.debug(f'Readings for the FLC: {[left_dist, front_dist, right_dist, angle_to_goal, dist]}')
-        self.logger.debug(f'New velocities: vtras = {self.vtras}, vrot = {self.vrot}')
+        self.logger.debug(f'New velocities: vtras = {vtras}, vrot = {vrot}')
 
-        return self.vtras, self.vrot
+        return vtras, vrot
     
     def __normalize_angle(self, angle):
         angle = angle % (2 * math.pi)  # It is always a positive number

@@ -65,9 +65,9 @@ class SwarmController:
         self.state = SwarmState.NONE
 
         # At first, the task is to get the swarm to go to the object
-        self.task = 1
+        self.task = constants.TASK_TO_FOOD
 
-    async def run(self, action=None, task=None):
+    async def run(self, action=None):
         """The main body that drives the swarm. Can give an optional argument 
         which denotes the action to take (move the swarm linearly, rotate the
         swarm or scale it). If the swarm is already processing an action it will
@@ -80,9 +80,6 @@ class SwarmController:
         
         assert (action in [0, 1, 2] or action is None), \
                 "[Simulation.step] Given action is not recognized"
-        
-        if task is not None:
-            self.task = task
 
         # Print a message in the case there is a given action and the swarm is 
         # already processing something else
@@ -187,7 +184,8 @@ class SwarmController:
                 self.state = SwarmState.NONE
 
     def set_task(self, task):
-        assert (task == 1 or task == 2), f"The task {task} is not recongized"
+        assert (task == constants.TASK_TO_FOOD or task == constants.TASK_TO_NEST), \
+            f"The task {task} is not recongized"
         
         self.task = task
 
@@ -216,14 +214,25 @@ class SwarmController:
         sum_vtras = 0
         sum_vrot = 0
         n = self.swarm_size
+        target_pos = self.__get_target_pos()
 
         for i in range(n):
-            vtras, vrot = self.robots[i].get_velocities(self.target.body.position, self.task)
+            vtras, vrot = self.robots[i].get_velocities(target_pos)
 
             sum_vtras += vtras
             sum_vrot += vrot
 
         return sum_vtras/n, sum_vrot/n
+    
+    def __get_target_pos(self):
+        """Return the position of the current target, which based on the task 
+        can be either the home base or the food object."""
+
+        if self.task == constants.TASK_TO_FOOD:
+            return self.target.body.position
+        
+        elif self.task == constants.TASK_TO_NEST:
+            return self.goal_pos
 
     def __compute_new_pos_for_robot(self, vrot, robot_n):
         """Based on the direction of the rotational velocity, compute the new 

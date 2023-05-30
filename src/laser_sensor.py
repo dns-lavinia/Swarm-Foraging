@@ -4,7 +4,8 @@ import numpy as np
 
 # Local imports
 import constants 
-    
+
+
 # This class was based on the sensor.py module that can be found at:   
 # https://github.com/charleslf2/2D-simulation-of-Simulataneous-Localisation-And-Maping-SLAM-               
 class LaserSensor:
@@ -89,7 +90,7 @@ class LaserSensor:
         self.position = pos
         self.sensor_angle = angle
     
-    def get_reading(self, obj_color):
+    def get_reading(self):
         """Perform all of the angular readings along the sensor's axis and check 
         if an object was found.
         
@@ -127,9 +128,8 @@ class LaserSensor:
                     # Get the color of the point 
                     color = self.screen.get_at((x_line, y_line))
                     
-                    # If the color is different from the background of the 
-                    # screen, or the home base then an objstacle was found
-                    if (color[0], color[1], color[2]) == obj_color:
+                    # If the color represents the color of an obstacle
+                    if (color[0], color[1], color[2]) == constants.COLOR["hunter-green"][:3]:
                         found_object = True
 
                         distance = self.__get_dist((x_line, y_line))
@@ -169,6 +169,7 @@ class LaserSensor:
         """Return the distance and the angle of the detected object with noise
         added to the measurement. This noise is simply a random value in the
         vicinity of the actual measurement."""
+        
         sigma = np.array([0.5, 0.01])
 
         mean = np.array([distance, angle])

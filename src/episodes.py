@@ -1,24 +1,17 @@
-import math  # TODO: delete this later
-import time
-import random
-import sys
 import asyncio
 import os 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress tensorflow warnings
 
 import numpy as np
-import pygame
 
 from keras.models import Sequential
 from keras.layers import Dense
-from collections import deque
 
 # Local imports 
 import constants
 import log
 
 from sim import Simulation
-from swarm import SwarmState
 
 
 def create_nn():
@@ -35,150 +28,6 @@ def create_nn():
 
     return model
 
-# Source: https://github.com/PacktPublishing/Deep-Reinforcement-Learning-with-Python/
-class DQN:
-    def __init__(self, state_size, action_size):
-        
-        #define the state size
-        self.state_size = state_size
-        
-        #define the action size
-        self.action_size = action_size
-        
-        #define the replay buffer
-        self.replay_buffer = deque(maxlen=5000)
-        
-        #define the discount factor
-        self.gamma = 0.9  
-        
-        #define the epsilon value
-        self.epsilon = 0.8   
-        
-        #define the update rate at which we want to update the target network
-        self.update_rate = 1000    
-        
-        #define the main network
-        self.main_network = self.build_network()
-        
-        #define the target network
-        self.target_network = self.build_network()
-        
-        #copy the weights of the main network to the target network
-        self.target_network.set_weights(self.main_network.get_weights())
-        
-    def build_network(self):
-        model = Sequential()
-        model.add(Dense(64, activation="tanh", input_shape=(5,)))
-        model.add(Dense(64, activation="tanh"))
-        model.add(Dense(2, activation="linear")) # linear activation
-
-        # Compile the model
-        model.compile(loss='mse', optimizer='adam')
-
-        return model
-
-    #We learned that we train DQN by randomly sampling a minibatch of transitions from the
-    #replay buffer. So, we define a function called store_transition which stores the transition information
-    #into the replay buffer
-
-    def store_transistion(self, state, action, reward, next_state, done):
-        self.replay_buffer.append((state, action, reward, next_state, done))
-        
-    #We learned that in DQN, to take care of exploration-exploitation trade off, we select action
-    #using the epsilon-greedy policy. So, now we define the function called epsilon_greedy
-    #for selecting action using the epsilon-greedy policy.
-    
-    def epsilon_greedy(self, state):
-        if random.uniform(0,1) < self.epsilon:
-            return np.random.randint(self.action_size)
-        
-        Q_values = self.main_network.predict(state)
-        
-        return np.argmax(Q_values[0])
-
-    #train the network
-    def train(self, batch_size):
-        
-        #sample a mini batch of transition from the replay buffer
-        minibatch = random.sample(self.replay_buffer, batch_size)
-        
-        #compute the Q value using the target network
-        for state, action, reward, next_state, done in minibatch:
-            if not done:
-                target_Q = (reward + self.gamma * np.amax(self.target_network.predict(next_state)))
-            else:
-                target_Q = reward
-                
-            #compute the Q value using the main network 
-            Q_values = self.main_network.predict(state)
-            
-            Q_values[0][action] = target_Q
-            
-            #train the main network
-            self.main_network.fit(state, Q_values, epochs=1, verbose=0)
-            
-    #update the target network weights by copying from the main network
-    def update_target_network(self):
-        self.target_network.set_weights(self.main_network.get_weights())
-
-# Source: https://github.com/PacktPublishing/Deep-Reinforcement-Learning-with-Python/
-async def run_episodes_enhanced():
-    num_episodes = 24
-    num_timesteps = 700
-    batch_size = 8
-    num_screens = 4 
-
-    sim = Simulation()
-
-    dqn = DQN(sim.OBSERVATION_SPACE_N, sim.ACTION_SPACE_N)
-
-    done = False 
-    time_step = 0
-
-    #for each episode
-    for i in range(num_episodes):
-        
-        #set return to 0
-        Return = 0
-        
-        #preprocess the game screen
-        state = sim.reset()
-        state = np.reshape(state, [1, len(state)])
-
-        #for each step in the episode
-        for t in range(num_timesteps):
-            #update the time step
-            time_step += 1
-            
-            #update the target network
-            if time_step % dqn.update_rate == 0:
-                dqn.update_target_network()
-            
-            #select the action
-            action = dqn.epsilon_greedy(state)
-            
-            #perform the selected action
-            next_state, reward, done = await sim.step(action)
-            next_state = np.reshape(next_state, [1, len(next_state)])
-            
-            #store the transition information
-            dqn.store_transistion(state, action, reward, next_state, done)
-            
-            #update current state to next state
-            state = next_state
-            
-            #update the return
-            Return += reward
-            
-            #if the episode is done then print the return
-            if done:
-                print('Episode: ',i, ',' 'Return', Return)
-                break
-                
-            #if the number of transistions in the replay buffer is greater than batch size
-            #then train the network
-            if len(dqn.replay_buffer) > batch_size:
-                dqn.train(batch_size)
 
 async def run_episodes():
     logger = log.create_logger(name="episodes",
@@ -251,4 +100,3 @@ async def run_episodes():
 
 if __name__ == "__main__":
     asyncio.run(run_episodes())
-    # asyncio.run(run_episodes_enhanced())

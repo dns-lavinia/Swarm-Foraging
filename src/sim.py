@@ -236,6 +236,9 @@ class Simulation:
         dist_to_goal = self.__get_dist(pos, self.target.body.position)
 
         if dist_to_goal > constants.SWARM_BOX_NEAR:
+            # Update the atsk 
+            self.swarm.task = constants.TASK_TO_FOOD
+
             # Check wether the swarm got closer to the target
             dist_last = self.__get_dist(last_pos, self.target.body.position)
             dist = self.__get_dist(pos, self.target.body.position)
@@ -244,7 +247,7 @@ class Simulation:
                 return 1
         else:
             # Update the task 
-            self.swarm.task = 2
+            self.swarm.task = constants.TASK_TO_NEST
 
             # Check wether the food object got closer to the goal
             dist_last = self.__get_dist(last_target, self.goal_pos)

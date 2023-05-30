@@ -127,30 +127,14 @@ class SRobot:
 
         return body
     
-    def get_velocities(self, food_pos, task=1):
+    def get_velocities(self, target_pos):
         """
-        Args:
-            task (int): The task to be considered by FLC. Can be either 1 or 2.
-            If task == 1, then then the target is considered to be the food 
-            object. If task == 2, then the target is considered to be the home
-            base.
-
         Returns:
             (float, float): Returns translational and roational velocities (in
             this order) once they are computed by the FLC.
         """
 
-        assert (task == 1 or task == 2), "Task not recongized"
-
-        if task == 1:
-            distances = self.sensor.get_reading(obj_color=constants.COLOR["hunter-green"][:3])
-
-            target_pos = food_pos
-        elif task == 2:
-            distances = self.sensor.get_reading(obj_color=constants.COLOR["auburn"])
-
-            target_pos = self.goal_pos
-
+        distances = self.sensor.get_reading()
         n = len(distances)
 
         # Get the minimum distance for readings of the left zone

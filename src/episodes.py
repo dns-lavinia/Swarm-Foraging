@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import os 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress tensorflow warnings
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from keras.models import Sequential
 from keras.layers import Dense
@@ -37,15 +39,17 @@ async def run_episodes():
     discount_factor = 0.95
     eps = 0.5
     eps_decay_factor = 0.999
-    n_episodes = 20
+    n_episodes = 10
 
     sim = Simulation()
     model = create_nn()
+
+    returns = [0] * n_episodes
         
     ########################################################################
     # REINFORCEMENT LEARNING ALGO
     ########################################################################
-    for _ in range(n_episodes):
+    for ep in range(n_episodes):
         state = sim.reset()  # reset the environment 
         state = np.reshape(state, [1, len(state)])
 
@@ -71,6 +75,9 @@ async def run_episodes():
             sim.print_state_info(new_state)
             logger.debug(f"The current reward is {reward}")
 
+            # Update return
+            returns[ep] += reward
+
             new_state = np.reshape(new_state, [1, len(new_state)])
 
             target = reward \
@@ -93,6 +100,17 @@ async def run_episodes():
 
             # Update done
             done = done | (sim_steps <= 0) 
+
+    ########################################################################
+    # SAVE THE WEIGHTS + PROCESS DATA
+    ########################################################################
+    
+    model.save(f"models/model{datetime.datetime.now()}.h5")
+    x_returns = [i for i in range(n_episodes)]
+
+    plt.bar(x_returns, returns)
+    plt.savefig(f'figures/fig{datetime.datetime.now()}.png')
+
 
 if __name__ == "__main__":
     asyncio.run(run_episodes())

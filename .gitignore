@@ -1,2 +1,4 @@
 # Ignore pycache
 src/__pycache__/
+src/figures/
+src/models/

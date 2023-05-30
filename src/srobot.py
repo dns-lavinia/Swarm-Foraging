@@ -110,13 +110,17 @@ class SRobot:
         # Add the attributes of the robot's body
         shape.mass = self.MASS
         shape.friction = 1
-        shape.body.damping = 0.99
         shape.color = constants.COLOR["grey"]
+        shape.body.velocity_func = self.__custom_vel_func
 
         # Add the body to the space
         space.add(body, shape)
 
         return body
+    
+    def __custom_vel_func(self, body, gravity, damping, dt):
+        new_damping = 0.99
+        pymunk.Body.update_velocity(body, gravity, damping, dt)
     
     def get_velocities(self, target_pos):
         """

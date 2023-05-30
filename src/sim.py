@@ -126,9 +126,9 @@ class Simulation:
 
             pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
             
-            swarm_angle_x = self.swarm.position[0] + self.swarm.f_sca * math.cos(self.swarm.angle)
-            swarm_angle_y = self.swarm.position[1] + self.swarm.f_sca * math.sin(self.swarm.angle)
-            pygame.draw.circle(self.screen, (0, 0, 255), center=(swarm_angle_x, swarm_angle_y), radius=3)
+            # swarm_angle_x = self.swarm.position[0] + self.swarm.f_sca * math.cos(self.swarm.angle)
+            # swarm_angle_y = self.swarm.position[1] + self.swarm.f_sca * math.sin(self.swarm.angle)
+            # pygame.draw.circle(self.screen, (0, 0, 255), center=(swarm_angle_x, swarm_angle_y), radius=3)
 
             self.space.debug_draw(self.draw_options)
 
@@ -283,7 +283,7 @@ class Simulation:
         
         return robots
 
-    def add_target(self, mass=5, length=20, position=None):
+    def add_target(self, mass=2, length=20, position=None):
         """Create and add to the space of the simulation the target object that
         is to be carried by the robots to the home base. The shape of the target
         object will be a square.
@@ -313,7 +313,8 @@ class Simulation:
 
         shape.color = constants.COLOR["hunter-green"]
         shape.mass = mass  # mass in kg
-        shape.friction = 0.9
+        shape.friction = 0.2
+        shape.elasticity = 0.1
 
         # Add the target object to the space
         self.space.add(body, shape)

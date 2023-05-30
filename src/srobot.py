@@ -127,7 +127,7 @@ class SRobot:
 
         return body
     
-    def get_velocities(self, target_pos, task=1):
+    def get_velocities(self, food_pos, task=1):
         """
         Args:
             task (int): The task to be considered by FLC. Can be either 1 or 2.
@@ -144,8 +144,12 @@ class SRobot:
 
         if task == 1:
             distances = self.sensor.get_reading(obj_color=constants.COLOR["hunter-green"][:3])
+
+            target_pos = food_pos
         elif task == 2:
             distances = self.sensor.get_reading(obj_color=constants.COLOR["auburn"])
+
+            target_pos = self.goal_pos
 
         n = len(distances)
 

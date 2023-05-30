@@ -32,13 +32,13 @@ class SwarmController:
     # The direction of the rotation has to be given by vrot.
     ROT_ANGLE = math.pi / 5
 
-    SWARM_RADIUS = 20  # in cm
+    SWARM_RADIUS = 22  # in cm
+
+    # Create and save the logger for this class
+    logger = log.create_logger(name="Swarm",
+                               level=log.LOG_DEBUG)
 
     def __init__(self, start_pos, start_angle, sim_space, goal_pos, target, *, swarm_size=SWARM_SIZE):
-        # Create and save the logger for this class
-        self.logger = log.create_logger(name=self.__class__.__name__,
-                                        level=log.LOG_INFO)
-        
         self.space = sim_space
         self.goal_pos = goal_pos
         self.target = target
@@ -53,9 +53,6 @@ class SwarmController:
 
         # Add the robots in the swarm and place them in a U shape
         self.robots = self.__add_robots()
-
-        # Flag used to denote that the swarm is busy
-        self.in_motion = False
 
         self.r_target_pos = None
         self.r_dir = None
@@ -92,6 +89,8 @@ class SwarmController:
             # Get the velocities to be used for the robots in the swarm
             self.vtras, self.vrot = self.get_avg_vel()
 
+            self.logger.debug(f'Vtras is {self.vtras} and vrot is {self.vrot}')
+
             # Move the swarm
             if action == 0:
                 self.state = SwarmState.TRANSLATION_INI
@@ -121,8 +120,10 @@ class SwarmController:
                 await self.robots[i].move(self.vtras)
             
             # Update the position of the swarm
-            new_x = self.position[0] + self.vtras * (3/constants.FPS) * math.cos(self.angle)
-            new_y = self.position[1] + self.vtras * (3/constants.FPS) * math.sin(self.angle)
+            new_x = self.position[0] \
+                    + self.vtras * (self.swarm_size/constants.FPS) * math.cos(self.angle)
+            new_y = self.position[1] \
+                    + self.vtras * (self.swarm_size/constants.FPS) * math.sin(self.angle)
             
             self.position = new_x, new_y
 
@@ -154,7 +155,7 @@ class SwarmController:
             if finished_tras == self.swarm_size:
                 # Update the angle of the swarm
                 self.set_angle(new_angle=(self.angle 
-                                          + self.get_sign(self.vrot) * self.ROT_ANGLE))
+                                          + 5 * self.vrot * (1.0/constants.FPS)))
                 
                 # Save the optimal direction that each robot should rotate at
                 self.r_dir = []
@@ -174,7 +175,7 @@ class SwarmController:
                 norm_angle = self.angle % (2 * math.pi)
                 norm_robot_angle = self.robots[i].body.angle % (2 * math.pi)
                 
-                if abs(norm_robot_angle - norm_angle) > 0.1:
+                if abs(norm_robot_angle - norm_angle) > 0.09:
                     await self.robots[i].rotate_to(self.angle, self.r_dir[i])
                 else: 
                     await self.robots[i].stop_move()
@@ -250,15 +251,16 @@ class SwarmController:
         """
         old_angle = self.angle + self.U_SHAPE_ALPHA / 2 + (robot_n * self.b_angle)
         swarm_center = self.position
+        angle = 5 * vrot * (1.0/constants.FPS)
 
         if vrot > 0:
             # Move clockwise
-            x_new = swarm_center[0] + self.f_sca * math.cos(old_angle + self.ROT_ANGLE)
-            y_new = swarm_center[1] + self.f_sca * math.sin(old_angle + self.ROT_ANGLE)
+            x_new = swarm_center[0] + self.f_sca * math.cos(old_angle + angle)
+            y_new = swarm_center[1] + self.f_sca * math.sin(old_angle + angle)
         else:
             # Move anti-clockwise
-            x_new = swarm_center[0] + self.f_sca * math.cos(old_angle - self.ROT_ANGLE)
-            y_new = swarm_center[1] + self.f_sca * math.sin(old_angle - self.ROT_ANGLE)
+            x_new = swarm_center[0] + self.f_sca * math.cos(old_angle - angle)
+            y_new = swarm_center[1] + self.f_sca * math.sin(old_angle - angle)
         
         return x_new, y_new
 
@@ -273,8 +275,7 @@ class SwarmController:
 
             robots.append(SRobot(space=self.space, 
                                  start_pos=pos,
-                                 start_angle=self.angle,
-                                 goal_pos=self.goal_pos))
+                                 start_angle=self.angle))
         
         return robots
     

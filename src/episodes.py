@@ -41,9 +41,6 @@ async def run_episodes():
 
     sim = Simulation()
     model = create_nn()
-
-    # Get the position of the homebase to show it in the simulation
-    goal_x, goal_y = sim.get_homebase_pos()
         
     ########################################################################
     # REINFORCEMENT LEARNING ALGO
@@ -67,11 +64,10 @@ async def run_episodes():
             else:
                 action = np.argmax(model.predict(state))
             
-            logger.debug(f"[CURRENT ACTION: {action}]")
-
             # Run the simulation with the given action
             new_state, reward, done = await sim.step(action)
 
+            logger.debug(f"[CURRENT ACTION: {action}]")
             sim.print_state_info(new_state)
             logger.debug(f"The current reward is {reward}")
 
@@ -87,7 +83,7 @@ async def run_episodes():
             model.fit(
                 state,
                 target_vector.reshape(-1, sim.ACTION_SPACE_N),
-                epochs=1, verbose=0
+                epochs=1, verbose="auto"
             )
 
             state = new_state

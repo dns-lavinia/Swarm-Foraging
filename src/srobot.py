@@ -15,14 +15,11 @@ class SRobot:
     MASS = 0.65  # kg
     RADIUS = 10  # cm
     logger =  log.create_logger(name="Robot",
-                                level=log.LOG_DEBUG)
+                                level=log.LOG_INFO)
 
-    def __init__(self, space, start_pos, start_angle, goal_pos):
+    def __init__(self, space, start_pos, start_angle):
         # Save the space the robots are going to be placed in
         self.space = space
-
-        # All of the robots know the goal or the nest position
-        self.goal_pos = goal_pos
 
         # Create the body of the robot
         self.body = self.__add_robot_body(space, 
@@ -89,13 +86,7 @@ class SRobot:
         norm_angle = angle % (2 * math.pi)
         norm_self_angle = self.body.angle % (2 * math.pi)
 
-        if norm_angle < 0:
-            norm_angle = 2 * math.pi - norm_angle
-        
-        if norm_self_angle < 0:
-            norm_self_angle = 2 * math.pi - norm_self_angle
-
-        if abs(norm_self_angle - norm_angle) < 0.1:
+        if abs(norm_self_angle - norm_angle) < 0.09:
             self.body.angular_velocity = 0
         else:
             self.body.angular_velocity = direction * math.pi/3

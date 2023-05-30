@@ -75,7 +75,8 @@ class Simulation:
                                      start_angle=(-math.pi / 2),
                                      sim_space=self.space,
                                      goal_pos=self.goal_pos,
-                                     target=self.target)
+                                     target=self.target,
+                                     swarm_size=3)
 
         return self.__get_state_vars()
     
@@ -95,7 +96,7 @@ class Simulation:
         
         Args:
             action (int): Can be one of the three options: 0 = tras, 1 = rot, 
-            3 = sca.
+            3 = sca. NOTE: the scaling action is not implemented.
         """
 
         assert (action in [0, 1, 2]), \
@@ -123,10 +124,11 @@ class Simulation:
             # Make the background green
             self.screen.fill(constants.COLOR["artichoke"])
 
-            # TODO: delete this later
-            self.swarm.robots[0].sensor.draw_sensor_angles()
-
-            # pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
+            pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
+            
+            swarm_angle_x = self.swarm.position[0] + self.swarm.f_sca * math.cos(self.swarm.angle)
+            swarm_angle_y = self.swarm.position[1] + self.swarm.f_sca * math.sin(self.swarm.angle)
+            pygame.draw.circle(self.screen, (0, 0, 255), center=(swarm_angle_x, swarm_angle_y), radius=3)
 
             self.space.debug_draw(self.draw_options)
 
@@ -255,6 +257,8 @@ class Simulation:
 
             if (dist_last - dist) > constants.MIN_DIST_CHANGE:
                 return 5
+            else:
+                return -3
         
         # If none of the conditions above are met, then the reward is -1
         return -1

@@ -129,7 +129,8 @@ class LaserSensor:
                     color = self.screen.get_at((x_line, y_line))
                     
                     # If the color represents the color of an obstacle
-                    if (color[0], color[1], color[2]) == constants.COLOR["hunter-green"][:3]:
+                    if (color[0], color[1], color[2]) != constants.COLOR["artichoke"] or \
+                        (color[0], color[1], color[2]) != constants.COLOR["auburn"]:
                         found_object = True
 
                         distance = self.__get_dist((x_line, y_line))

@@ -1,10 +1,13 @@
-import asyncio
 import datetime
+import asyncio
+import time
+import json
 import os 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress tensorflow warnings
 
-import numpy as np
 import matplotlib.pyplot as plt
+import tensorflow as tf
+import numpy as np
 
 from keras.models import Sequential
 from keras.layers import Dense
@@ -20,31 +23,39 @@ def create_nn():
     # NOTE: I changed the output of the neural network to 2 outputs instead of
     # 3, to represent vtras and vrot (I ignored the scaling part for now and
     # I assumed that the swarm is already in an optimal scaling from the beginning)
+
+    init = tf.keras.initializers.HeUniform()
     model = Sequential()
-    model.add(Dense(64, activation="tanh", input_shape=(5,)))
-    model.add(Dense(64, activation="tanh"))
+    model.add(Dense(64, activation="relu", input_shape=(5,), kernel_initializer=init))
+    model.add(Dense(64, activation="relu"))
     model.add(Dense(2, activation="linear")) # linear activation
 
     # Compile the model
-    model.compile(loss='mse', optimizer='adam')
+    optimizer = tf.keras.optimizers.Adam(lr=constants.LR)
+    model.compile(loss=tf.keras.losses.Huber(), optimizer=optimizer, metrics=['accuracy'])
 
     return model
 
 
 async def run_episodes():
     logger = log.create_logger(name="episodes",
-                               level=log.LOG_DEBUG)
+                               level=log.LOG_INFO)
 
     # Initializing some constants but not only
     discount_factor = 0.95
     eps = 0.5
     eps_decay_factor = 0.999
-    n_episodes = 10
+    n_episodes = 20
 
     sim = Simulation()
     model = create_nn()
 
-    returns = [0] * n_episodes
+    rewards_per_step = []
+    rewards_per_ep = [0] * n_episodes
+    timesteps_per_ep = [0] * n_episodes
+    total_reward = 0
+
+    start_time = time.time()
         
     ########################################################################
     # REINFORCEMENT LEARNING ALGO
@@ -72,11 +83,8 @@ async def run_episodes():
             new_state, reward, done = await sim.step(action)
 
             logger.debug(f"[CURRENT ACTION: {action}]")
-            sim.print_state_info(new_state)
+            # sim.print_state_info(new_state)
             logger.debug(f"The current reward is {reward}")
-
-            # Update return
-            returns[ep] += reward
 
             new_state = np.reshape(new_state, [1, len(new_state)])
 
@@ -90,13 +98,19 @@ async def run_episodes():
             model.fit(
                 state,
                 target_vector.reshape(-1, sim.ACTION_SPACE_N),
-                epochs=1, verbose="auto"
+                epochs=1, verbose=0
             )
 
             state = new_state
 
             # Update the remaining simulation steps
             sim_steps -= 1
+
+            # Update the timestep
+            total_reward += reward
+            rewards_per_step.append(total_reward)
+            rewards_per_ep[ep] += reward
+            timesteps_per_ep[ep] += 1
 
             # Update done
             done = done | (sim_steps <= 0) 
@@ -105,12 +119,21 @@ async def run_episodes():
     # SAVE THE WEIGHTS + PROCESS DATA
     ########################################################################
     
+    # Save the model
     model.save(f"models/model{datetime.datetime.now()}.h5")
-    x_returns = [i for i in range(n_episodes)]
 
-    plt.bar(x_returns, returns)
-    plt.savefig(f'figures/fig{datetime.datetime.now()}.png')
+    # Save the metrics for this RL algo run
+    data = {
+        'rewards_per_step': rewards_per_step,
+        'reward_per_ep': rewards_per_ep,
+        'timesteps_per_ep' : timesteps_per_ep,
+        'total_time': time.time()-start_time,
+    }
 
+    filename = f'data/data{datetime.datetime.now()}.json'
+    with open(filename, 'w') as fp:
+        json.dump(data, fp)
+    
 
 if __name__ == "__main__":
     asyncio.run(run_episodes())

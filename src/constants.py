@@ -20,3 +20,6 @@ MIN_DIST_CHANGE = 1  # cm
 
 TASK_TO_FOOD = 1
 TASK_TO_NEST = 2
+
+# The learning rate for the network
+LR = 0.001

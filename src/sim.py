@@ -6,6 +6,8 @@ import pygame
 import pymunk
 import pymunk.pygame_util
 
+from rl.core import Env
+
 # Local imports
 import constants
 import log
@@ -13,10 +15,13 @@ import log
 from srobot import SRobot
 from swarm import SwarmController, SwarmState
 
-class Simulation:
+class Simulation(Env):
     OBSERVATION_SPACE_N = 5
     ACTION_SPACE_N = 2
     DAMPING = 0.05
+
+    action_space = ACTION_SPACE_N
+    observation_space = OBSERVATION_SPACE_N
 
     def __init__(self, screen_size=constants.SCREEN_SIZE):
         """Initialize the simulation.
@@ -90,8 +95,14 @@ class Simulation:
         self.logger.info(f"Dist from box to goal: {step[2]}")
         self.logger.info(f"Angle of box to goal: {step[3]}")
         self.logger.info(f"Rotation of the swarm: {step[4]}")
+
+    def render(self, mode=None, close=False):
+        pass
     
-    async def step(self, action):
+    def close(self):
+        pass
+
+    def step(self, action):
         """Advance the simulation one step given an action.
         
         Args:
@@ -106,7 +117,7 @@ class Simulation:
         last_target = self.target.body.position  # Save the last position of the target
 
         # Perform the given action
-        await self.swarm.run(action)
+        self.swarm.run(action)
 
         while self.swarm.state != SwarmState.NONE:
             # Finish the execution of the game when a key/button is pressed
@@ -119,17 +130,14 @@ class Simulation:
             # Advance the simulation with one step
             self.space.step(1/constants.FPS) 
 
-            await self.swarm.run()
+            self.swarm.run()
 
             # Make the background green
             self.screen.fill(constants.COLOR["artichoke"])
 
+            # TODO: comment or delete this later
             pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
             
-            # swarm_angle_x = self.swarm.position[0] + self.swarm.f_sca * math.cos(self.swarm.angle)
-            # swarm_angle_y = self.swarm.position[1] + self.swarm.f_sca * math.sin(self.swarm.angle)
-            # pygame.draw.circle(self.screen, (0, 0, 255), center=(swarm_angle_x, swarm_angle_y), radius=3)
-
             self.space.debug_draw(self.draw_options)
 
             # Draw the homebase flag     
@@ -149,7 +157,7 @@ class Simulation:
 
         new_state = self.__get_state_vars()
 
-        return new_state, reward, done
+        return new_state, reward, done, {}
     
     def __get_done_status(self):
         """Stop conditions for the current simulation. There are two main conditions:

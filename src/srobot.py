@@ -34,7 +34,7 @@ class SRobot:
         # Attach the fuzzy controller to it
         self.flc = RobotFuzzySystem()
     
-    async def move(self, vtras):
+    def move(self, vtras):
         self.space.step(1/constants.FPS)
 
         dv = Vec2d(vtras, 0.0)
@@ -43,7 +43,7 @@ class SRobot:
         # Update the position of the sensor
         self.sensor.update_position(self.body.position, self.body.angle)
 
-    async def stop_move(self):
+    def stop_move(self):
         # Reset the velocity
         self.body.velocity = 0, 0
 
@@ -55,7 +55,7 @@ class SRobot:
         # Update the position of the sensor
         self.sensor.update_position(self.body.position, self.body.angle)
     
-    async def move_to(self, target_pos):
+    def move_to(self, target_pos):
         target_delta = target_pos - self.body.position
         turn = self.body.rotation_vector.cpvunrotate(target_delta).angle 
         self.body.angle = self.body.angle - turn
@@ -80,7 +80,7 @@ class SRobot:
         # Update the position of the sensor
         self.sensor.update_position(self.body.position, self.body.angle) 
 
-    async def rotate_to(self, angle, direction):
+    def rotate_to(self, angle, direction):
         """Rotate the robot to a given angle."""
 
         norm_angle = angle % (2 * math.pi)
@@ -119,7 +119,7 @@ class SRobot:
         return body
     
     def __custom_vel_func(self, body, gravity, damping, dt):
-        new_damping = 0.99
+        new_damping = 1.00
         pymunk.Body.update_velocity(body, gravity, damping, dt)
     
     def get_velocities(self, target_pos):

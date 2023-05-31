@@ -1,4 +1,5 @@
 import math
+import time 
 
 from enum import Enum
 
@@ -60,11 +61,14 @@ class SwarmController:
 
         # Upon initialization, the swarm isn't performing any action
         self.state = SwarmState.NONE
+        self.state_start = time.time()
+        self.state_count = 0
+        self.last_state = SwarmState.NONE
 
         # At first, the task is to get the swarm to go to the object
         self.task = constants.TASK_TO_FOOD
 
-    async def run(self, action=None):
+    def run(self, action=None):
         """The main body that drives the swarm. Can give an optional argument 
         which denotes the action to take (move the swarm linearly, rotate the
         swarm or scale it). If the swarm is already processing an action it will
@@ -83,6 +87,12 @@ class SwarmController:
         if self.state != SwarmState.NONE and action is not None:
             self.logger.info("The swarm is already running a different action")
             return
+        
+        self.logger.debug(f"State is [{self.state}]")
+        self.logger.debug(f"State count is {self.state_count}")
+
+        if self.state_count > 150 and self.state == SwarmState.NONE and action is not None:
+            action = 1 - action
 
         # If the swarm is ready to accept commands  
         if self.state == SwarmState.NONE:
@@ -93,10 +103,23 @@ class SwarmController:
 
             # Move the swarm
             if action == 0:
+                if self.last_state != SwarmState.TRANSLATION_INI:
+                    self.__reset_state_count()
+                    self.last_state = SwarmState.TRANSLATION_INI
+                else:
+                    self.state_count += 1
+
                 self.state = SwarmState.TRANSLATION_INI
+                self.__reset_state_start()
 
             # Rotate the swarm
             elif action == 1:
+                if self.last_state != SwarmState.ROTATION_MOVE:
+                    self.__reset_state_count()
+                    self.last_state = SwarmState.ROTATION_MOVE
+                else:
+                    self.state_count += 1
+
                 # Target positions for each robot in the swarm
                 self.r_target_pos = []
 
@@ -111,13 +134,14 @@ class SwarmController:
 
                     # Stop the motion of the robot
                     for i in range(self.swarm_size):
-                        await self.robots[i].stop_move()
+                        self.robots[i].stop_move()
                     
                 self.state = SwarmState.ROTATION_MOVE
+                self.__reset_state_start()
         
         elif self.state == SwarmState.TRANSLATION_INI:
             for i in range(self.swarm_size):
-                await self.robots[i].move(self.vtras)
+                self.robots[i].move(self.vtras)
             
             # Update the position of the swarm
             new_x = self.position[0] \
@@ -129,10 +153,11 @@ class SwarmController:
 
             # Movement finished
             self.state = SwarmState.TRANSLATION_STOP
+            self.__reset_state_start()
         
         elif self.state == SwarmState.TRANSLATION_STOP:
             for i in range(self.swarm_size):
-                await self.robots[i].stop_move()
+                self.robots[i].stop_move()
 
             # Movement finished
             self.state = SwarmState.NONE
@@ -140,14 +165,18 @@ class SwarmController:
         elif self.state == SwarmState.ROTATION_MOVE:
             finished_tras = 0
 
+            # If the swarm got stuck for more than 5 seconds
+            if (time.time() - self.state_start) > 5:
+                self.__unstuck_swarm()
+
             # Move each robot to the new spot
             for i in range(self.swarm_size):
                 dist = (self.robots[i].body.position - self.r_target_pos[i]).get_length_sqrd()
 
                 if dist >= 0.5 ** 2:
-                    await self.robots[i].move_to(target_pos=self.r_target_pos[i])
+                    self.robots[i].move_to(target_pos=self.r_target_pos[i])
                 else:
-                    await self.robots[i].stop_move()
+                    self.robots[i].stop_move()
                     finished_tras += 1
                     
             # If all of the robots finished moving to their designated position
@@ -167,22 +196,26 @@ class SwarmController:
                     self.r_dir.append(1 if diff < math.pi else -1)
         
                 self.state = SwarmState.ROTATION_ROT
+                self.__reset_state_start()
 
         elif self.state == SwarmState.ROTATION_ROT:
-            finished_rot = 0
-
             for i in range(self.swarm_size):
-                norm_angle = self.angle % (2 * math.pi)
-                norm_robot_angle = self.robots[i].body.angle % (2 * math.pi)
-                
-                if abs(norm_robot_angle - norm_angle) > 0.09:
-                    await self.robots[i].rotate_to(self.angle, self.r_dir[i])
-                else: 
-                    await self.robots[i].stop_move()
-                    finished_rot += 1
+                self.robots[i].body.angle = self.angle % (2 * math.pi)
 
-            if finished_rot == self.swarm_size:
-                self.state = SwarmState.NONE
+            self.state = SwarmState.NONE
+
+    def __unstuck_swarm(self):
+        for i in range(self.swarm_size):
+            self.robots[i].body.angle = self.angle
+        
+        # Reset the state
+        self.state = SwarmState.NONE
+
+    def __reset_state_count(self):
+        self.state_count = 0
+
+    def __reset_state_start(self):
+        self.state_start = time.time()
 
     def set_task(self, task):
         assert (task == constants.TASK_TO_FOOD or task == constants.TASK_TO_NEST), \

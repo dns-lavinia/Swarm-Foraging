@@ -3,7 +3,7 @@ import json
 
 import matplotlib.pyplot as plt
 
-def main():
+def load_old():
     path_to_json_files="data/"
 
     json_file_names = [filename for filename in os.listdir(path_to_json_files) if filename.endswith('.json')]
@@ -46,6 +46,26 @@ def main():
     plt.show()
 
 
+def load():
+    json_file_name = "data/data2023-06-01 16:44:28.836607.json"
+
+    with open(json_file_name) as json_file:
+        data = json.load(json_file)
+        x = [(i+1) for i in range(len(data['episode_reward']))]
+
+        reward_avg = [data['episode_reward'][i]/data['nb_episode_steps'][i] for i in range(len(data['episode_reward']))]
+
+        plt.figure(1)
+        plt.plot(x, reward_avg)
+        plt.xlabel('Episode number')
+        plt.ylabel('Episode reward')
+
+        plt.figure(2)
+        plt.plot(x, data['nb_episode_steps'])
+        plt.xlabel('Episode number')
+        plt.ylabel('Number steps per episode')
+        plt.show()
+
 
 if __name__ == "__main__":
-    main()
+    load()

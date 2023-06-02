@@ -37,7 +37,7 @@ class SwarmController:
 
     # Create and save the logger for this class
     logger = log.create_logger(name="Swarm",
-                               level=log.LOG_DEBUG)
+                               level=log.LOG_INFO)
 
     def __init__(self, start_pos, start_angle, sim_space, goal_pos, target, *, swarm_size=SWARM_SIZE):
         self.space = sim_space

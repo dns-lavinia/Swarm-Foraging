@@ -166,12 +166,12 @@ class Simulation(Env):
         """
 
         # Check if the robots of the swarm are still on the board
-        for i in range(self.swarm.swarm_size):
-            if self.swarm.robots[i].body.position[0] < 0 or self.swarm.robots[i].body.position[0] > self.screen_size[0]:
-                return True
+        # for i in range(self.swarm.swarm_size):
+        #     if self.swarm.robots[i].body.position[0] < 0 or self.swarm.robots[i].body.position[0] > self.screen_size[0]:
+        #         return True
 
-            elif self.swarm.robots[i].body.position[1] < 0 or self.swarm.robots[i].body.position[1] > self.screen_size[1]:
-                return True
+        #     elif self.swarm.robots[i].body.position[1] < 0 or self.swarm.robots[i].body.position[1] > self.screen_size[1]:
+        #         return True
 
         return True if (self.target.point_query(self.goal_pos).distance < 0) else False 
     
@@ -243,6 +243,13 @@ class Simulation(Env):
         if self.target.point_query(self.goal_pos).distance < 0:
             return 100
         
+        for i in range(self.swarm.swarm_size):
+            if self.swarm.robots[i].body.position[0] < 0 or self.swarm.robots[i].body.position[0] > self.screen_size[0]:
+                return -10
+
+            elif self.swarm.robots[i].body.position[1] < 0 or self.swarm.robots[i].body.position[1] > self.screen_size[1]:
+                return -10
+        
         dist_to_goal = self.__get_dist(pos, self.target.body.position)
 
         if dist_to_goal > constants.SWARM_BOX_NEAR:
@@ -291,7 +298,7 @@ class Simulation(Env):
         
         return robots
 
-    def add_target(self, mass=2, length=20, position=None):
+    def add_target(self, mass=1, length=20, position=None):
         """Create and add to the space of the simulation the target object that
         is to be carried by the robots to the home base. The shape of the target
         object will be a square.
@@ -309,7 +316,7 @@ class Simulation(Env):
         if position is None:
             h, w = self.screen_size
             x = random.randint(w/5, w - (2 * w/5))  # 50, 420
-            y = random.randint((w/5 + w/25), w/2)  # 120, 250
+            y = random.randint((w/5 + w/25), w - (2 * w/5))  # 120, 300
         else:
             x, y = position
 
@@ -336,7 +343,7 @@ class Simulation(Env):
         # if the position is not given
         if position is None:
             h, w = self.screen_size
-            x = random.randint(w/10, w/5 - w/25)  # 50, 80
+            x = random.randint(w/5+w/25, w/2)  # 120, 100
             y = random.randint(w - w/5, w - (w/5 - w/25))  # 400, 420
         else:
             x, y = position

@@ -30,6 +30,7 @@ class Simulation(Env):
             screen_size ((int, int), optional): The size of the surface. Defaults 
             to constants.SCREEN_SIZE.
         """
+
         # Initialize the game
         pygame.init()
 
@@ -40,8 +41,11 @@ class Simulation(Env):
         self.screen = pygame.display.set_mode(self.screen_size)
 
         # Set the title of the simulation
-        pygame.display.set_caption("Foraging in Swarm Robotics")
+        pygame.display.set_caption("Foraging Task")
         self.clock = pygame.time.Clock()
+
+        # Set the font for the informational text
+        self.font = pygame.font.SysFont("Arial", 12)
 
         # Considering the screen variable above, the space would occupy
         # this whole screen and would have a dimension equal to the one
@@ -136,7 +140,7 @@ class Simulation(Env):
             self.screen.fill(constants.COLOR["artichoke"])
 
             # TODO: comment or delete this later
-            pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
+            # pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
             
             self.space.debug_draw(self.draw_options)
 
@@ -146,6 +150,9 @@ class Simulation(Env):
                                 color=constants.COLOR["auburn"], 
                                 points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
         
+            # Render the text 
+            self.__render_stats()
+
             pygame.display.flip()
             self.clock.tick(constants.FPS)
 
@@ -159,19 +166,25 @@ class Simulation(Env):
 
         return new_state, reward, done, {}
     
+    def __render_stats(self):
+        """Render the relevant stats on the pygame screen."""
+        
+        state_vars = self.__get_state_vars()
+        stats_txt = f"Distance from swarm to target: {'{:.2f}'.format(state_vars[0])} [cm]\n" +\
+                    f"Angle of swarm to target: {'{:.2f}'.format(state_vars[1])} [rad]\n" +\
+                    f"Distance of box to goal: {'{:.2f}'.format(state_vars[2])} [cm]\n" +\
+                    f"Angle of box to goal: {'{:.2f}'.format(state_vars[3])} [rad]\n" +\
+                    f"Rotation of the swarm: {'{:.2f}'.format(state_vars[4])} [rad]"
+        
+        lines = stats_txt.splitlines()
+
+        for i, l in enumerate(lines):
+            self.screen.blit(self.font.render(l, 0, (0, 0, 0)), (5, 5 + 12* i))    
+
     def __get_done_status(self):
-        """Stop conditions for the current simulation. There are two main conditions:
-        (1) All of the robots must be visible on the map.
-        (2) The target food box arrived in the home base.
+        """Stop condition for the current simulation: The target food box 
+        arrived in the home base.
         """
-
-        # Check if the robots of the swarm are still on the board
-        # for i in range(self.swarm.swarm_size):
-        #     if self.swarm.robots[i].body.position[0] < 0 or self.swarm.robots[i].body.position[0] > self.screen_size[0]:
-        #         return True
-
-        #     elif self.swarm.robots[i].body.position[1] < 0 or self.swarm.robots[i].body.position[1] > self.screen_size[1]:
-        #         return True
 
         return True if (self.target.point_query(self.goal_pos).distance < 0) else False 
     

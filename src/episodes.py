@@ -49,7 +49,7 @@ def run_episodes(mode=None):
 
         # load the weights
         dqn.load_weights(weights_filename)
-        dqn.fit(sim, nb_steps=1000, nb_max_episode_steps=constants.MAX_SIM_STEPS)
+        dqn.fit(sim, nb_steps=1000, nb_max_episode_steps=constants.MAX_EP_STEPS)
         # dqn.test(sim, 
         #          nb_episodes=5,
         #          nb_max_episode_steps=constants.MAX_SIM_STEPS)
@@ -59,13 +59,13 @@ def run_episodes(mode=None):
     history = dqn.fit(sim, 
                       nb_steps=50000, 
                       verbose=2,
-                      nb_max_episode_steps=constants.MAX_SIM_STEPS)
+                      nb_max_episode_steps=constants.MAX_EP_STEPS)
     
     print('[TESTING PHASE]')
 
     dqn.test(sim, 
              nb_episodes=5,
-             nb_max_episode_steps=constants.MAX_SIM_STEPS)
+             nb_max_episode_steps=constants.MAX_EP_STEPS)
     
     print(history.history)
     dump_to_file(history.history)

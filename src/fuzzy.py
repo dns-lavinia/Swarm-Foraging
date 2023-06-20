@@ -201,7 +201,7 @@ class RobotFuzzySystem:
         self.dist = DomainModified(name="Distance to goal", low=0, high=2000, res=5)
         self.dist.near = linear(m=-1.0/40, b=1.0)
         self.dist.med = triangular(low=30, high=200)
-        self.dist.far = linear(m=3240.0/182, b=-18.0/182)
+        self.dist.far = linear(m=1.0/1830, b=-17.0/183)
 
         # Fuzzy set representing the angle of the robot itself relative to the goal
         self.ang = DomainModified(name="Angle of robot", low=-3.2, high=3.2, res=0.1)

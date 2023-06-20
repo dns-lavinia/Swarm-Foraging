@@ -1,14 +1,14 @@
 from fuzzy import RobotFuzzySystem
 
+# Run this python script to view the fuzzy sets
 def main():
-    # Based on the LiDAR sensor readings, divide them into three zones, i.e.
-    # left, front and right.
-    # To quantize the information from three angular readings into one, the
-    # closest distance to the object detected from that number of readings would
-    # be considered 
     sys = RobotFuzzySystem()
 
-    print(sys.evaluate(100, 102, 103, 500, -2))
+    sys.left.view()
+    sys.ang.view()
+    sys.dist.view()
+    sys.vrot.view()
+    sys.vtrans.view()
 
 
 if __name__ == "__main__":

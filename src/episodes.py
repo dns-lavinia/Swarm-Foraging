@@ -1,6 +1,9 @@
 import os 
 import json
+import random
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress tensorflow warnings
+
+import numpy as np
 
 from datetime import datetime
 from keras.models import Sequential
@@ -10,7 +13,14 @@ from keras.optimizers import Adam
 from rl.agents import SARSAAgent
 from rl.policy import BoltzmannQPolicy
 
-import cma
+from rl.callbacks import (
+    CallbackList,
+    TestLogger,
+    Visualizer
+)
+
+from copy import deepcopy
+from tensorflow.python.keras.callbacks import History
 
 # Local imports 
 import constants
@@ -32,46 +42,59 @@ def create_nn():
     return model
 
 
+def run_random():
+    """Run the simulation using random actions."""
+
+    sim = Simulation()
+    steps = 5000
+
+    while steps > 0:
+        # Generate the next random action 
+        action = random.randint(0, 1)
+
+        _, _, done, _ = sim.step(action)
+
+        if done is True:
+            sim.reset()
+
+
 def run_episodes(mode=None):
+    """Run the simulation using the SARSA RL method."""
+
     sim = Simulation()
     model = create_nn()
 
     policy = BoltzmannQPolicy()
-    dqn = SARSAAgent(model=model,
-                     nb_actions=sim.ACTION_SPACE_N,
-                     nb_steps_warmup=10,
-                     policy=policy)
+    sarsa = SARSAAgent(model=model,
+                       nb_actions=sim.ACTION_SPACE_N,
+                       nb_steps_warmup=10,
+                       policy=policy,
+                       test_policy=policy)
     
-    dqn.compile(Adam(learning_rate=3e-4), metrics=['mae'])
+    sarsa.compile(Adam(learning_rate=3e-4), metrics=['mae'])
     
     if mode == "test":
         weights_filename = f'models/dqn_weights_2023-06-01 16:44:28.838974.h5f'
 
         # load the weights
-        dqn.load_weights(weights_filename)
-        dqn.fit(sim, nb_steps=1000, nb_max_episode_steps=constants.MAX_EP_STEPS)
-        # dqn.test(sim, 
-        #          nb_episodes=5,
-        #          nb_max_episode_steps=constants.MAX_SIM_STEPS)
+        sarsa.load_weights(weights_filename)
+
+        sarsa.test(sim,
+                   nb_episodes=5,
+                   nb_max_episode_steps=constants.MAX_EP_STEPS)
 
         return 
 
-    history = dqn.fit(sim, 
+    history = sarsa.fit(sim, 
                       nb_steps=50000, 
                       verbose=2,
                       nb_max_episode_steps=constants.MAX_EP_STEPS)
-    
-    print('[TESTING PHASE]')
-
-    dqn.test(sim, 
-             nb_episodes=5,
-             nb_max_episode_steps=constants.MAX_EP_STEPS)
     
     print(history.history)
     dump_to_file(history.history)
 
     # Save the weights 
-    dqn.save_weights(f'models/dqn_weights_{datetime.today()}.h5f', overwrite=False)
+    sarsa.save_weights(f'models/dqn_weights_{datetime.today()}.h5f', overwrite=False)
 
 
 def dump_to_file(data):
@@ -80,3 +103,4 @@ def dump_to_file(data):
 
 if __name__ == "__main__":
     run_episodes("test")
+    # run_random()

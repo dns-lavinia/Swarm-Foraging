@@ -130,7 +130,8 @@ class LaserSensor:
                     
                     # If the color represents the color of an obstacle
                     if (color[0], color[1], color[2]) != constants.COLOR["artichoke"] or \
-                        (color[0], color[1], color[2]) != constants.COLOR["auburn"]:
+                        (color[0], color[1], color[2]) != constants.COLOR["auburn"] or \
+                        (color[0], color[1], color[2]) != (0, 0, 0):
                         found_object = True
 
                         distance = self.__get_dist((x_line, y_line))

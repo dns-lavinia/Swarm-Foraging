@@ -1,26 +1,17 @@
 import os 
+import time
 import json
 import random
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress tensorflow warnings
-
-import numpy as np
 
 from datetime import datetime
 from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from keras.optimizers import Adam
 
-from rl.agents import SARSAAgent
-from rl.policy import BoltzmannQPolicy
-
-from rl.callbacks import (
-    CallbackList,
-    TestLogger,
-    Visualizer
-)
-
-from copy import deepcopy
-from tensorflow.python.keras.callbacks import History
+from rl.agents import SARSAAgent, DQNAgent
+from rl.policy import BoltzmannQPolicy, EpsGreedyQPolicy, LinearAnnealedPolicy
+from rl.memory import SequentialMemory
 
 # Local imports 
 import constants
@@ -46,35 +37,110 @@ def run_random():
     """Run the simulation using random actions."""
 
     sim = Simulation()
-    steps = 5000
+    max_steps = 35000
 
-    while steps > 0:
+    episode_reward = []
+    nb_episode_steps = []
+    nb_steps = []
+
+    ep_reward = 0
+    ep_steps = 0
+    steps = 0
+
+    start_time = time.time() 
+
+    while steps < max_steps:
         # Generate the next random action 
         action = random.randint(0, 1)
 
-        _, _, done, _ = sim.step(action)
+        _, reward, done, _ = sim.step(action)
+
+        ep_reward += reward
+        ep_steps += 1
+        steps += 1
 
         if done is True:
+            episode_reward.append(ep_reward)
+            nb_episode_steps.append(ep_steps)
+            nb_steps.append(steps)
+
+            ep_reward = 0
+            ep_steps = 0
+
             sim.reset()
+    
+    end_time = time.time()
+    print(f"Ran for {end_time-start_time}s")
+
+    history = {
+        "episode_reward": episode_reward,
+        "nb_episode_steps": nb_episode_steps,
+        "nb_steps": nb_steps,
+    }
+
+    dump_to_file(history, prefix="rnd")
 
 
-def run_episodes(mode=None):
-    """Run the simulation using the SARSA RL method."""
+def run_episodes_dqn(mode=None):
+    """Run the simulation using the DQN RL method."""
 
     sim = Simulation()
     model = create_nn()
 
+    memory = SequentialMemory(limit=50000, window_length=1)
+    policy = BoltzmannQPolicy()
+    
+    dqn = DQNAgent(model=model,
+                   nb_actions=sim.ACTION_SPACE_N,
+                   memory=memory,
+                   nb_steps_warmup=20,
+                   target_model_update=1e-2,
+                   policy=policy,
+                   test_policy=policy)
+
+    dqn.compile(Adam(learning_rate=3e-4), metrics=['mae'])
+    
+    if mode == "test":
+        weights_filename = f'models/dqn_weights_2023-06-01 16:44:28.838974.h5f'
+
+        # load the weights
+        dqn.load_weights(weights_filename)
+
+        dqn.test(sim,
+                 nb_episodes=5,
+                 nb_max_episode_steps=constants.MAX_EP_STEPS)
+
+        return 
+
+    history = dqn.fit(sim, 
+                      nb_steps=200000, 
+                      verbose=2,
+                      nb_max_episode_steps=constants.MAX_EP_STEPS)
+    
+    dump_to_file(history.history, prefix="dqn")
+
+    # Save the weights 
+    dqn.save_weights(f'models/dqn_weights_{datetime.today()}.h5f', overwrite=False)
+
+
+def run_episodes_sarsa(mode=None):
+    """Run the simulation using the SARSA RL method."""
+
+    sim = Simulation()
+    model = create_nn()
+    
+
     policy = BoltzmannQPolicy()
     sarsa = SARSAAgent(model=model,
                        nb_actions=sim.ACTION_SPACE_N,
-                       nb_steps_warmup=10,
+                       nb_steps_warmup=20,
                        policy=policy,
                        test_policy=policy)
     
     sarsa.compile(Adam(learning_rate=3e-4), metrics=['mae'])
     
     if mode == "test":
-        weights_filename = f'models/dqn_weights_2023-06-01 16:44:28.838974.h5f'
+        weights_filename = f'models/sarsa_weights_2023-06-01 16:44:28.838974.h5f'
 
         # load the weights
         sarsa.load_weights(weights_filename)
@@ -86,21 +152,21 @@ def run_episodes(mode=None):
         return 
 
     history = sarsa.fit(sim, 
-                      nb_steps=50000, 
-                      verbose=2,
-                      nb_max_episode_steps=constants.MAX_EP_STEPS)
+                        nb_steps=200000, 
+                        verbose=2,
+                        nb_max_episode_steps=constants.MAX_EP_STEPS)
     
-    print(history.history)
-    dump_to_file(history.history)
+    dump_to_file(history.history, prefix="sarsa")
 
     # Save the weights 
-    sarsa.save_weights(f'models/dqn_weights_{datetime.today()}.h5f', overwrite=False)
+    sarsa.save_weights(f'models/sarsa_weights_{datetime.today()}.h5f', overwrite=False)
 
 
-def dump_to_file(data):
-    with open(f'data/data{datetime.today()}.json', 'w') as f:
+def dump_to_file(data, prefix):
+    with open(f'data/{prefix}_data{datetime.today()}.json', 'w') as f:
         json.dump(data, f, default=int)
 
 if __name__ == "__main__":
-    run_episodes("test")
+    # run_episodes_sarsa()
+    run_episodes_dqn()
     # run_random()

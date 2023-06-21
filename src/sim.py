@@ -138,9 +138,6 @@ class Simulation(Env):
 
             # Make the background green
             self.screen.fill(constants.COLOR["artichoke"])
-
-            # TODO: comment or delete this later
-            # pygame.draw.circle(self.screen, constants.COLOR["auburn"], center=self.swarm.position, radius=self.swarm.f_sca)
             
             self.space.debug_draw(self.draw_options)
 
@@ -149,7 +146,13 @@ class Simulation(Env):
             pygame.draw.polygon(surface=self.screen, 
                                 color=constants.COLOR["auburn"], 
                                 points=((goal_x+25, goal_y),(goal_x, goal_y+7),(goal_x, goal_y-7)))
-        
+
+            pygame.draw.circle(surface=self.screen,
+                               color=constants.COLOR["auburn"],
+                               center=(self.goal_pos[0]+12, self.goal_pos[1]),
+                               radius=constants.HOME_NEST_AREA,
+                               width=1)
+
             # Render the text 
             self.__render_stats()
 
@@ -186,8 +189,13 @@ class Simulation(Env):
         arrived in the home base.
         """
 
-        return True if (self.target.point_query(self.goal_pos).distance < 0) else False 
-    
+        # Compute the vertices of the triangle shape of the nest
+        center_pos = (self.goal_pos[0]+12, self.goal_pos[1])
+        target_pos = self.target.body.position
+
+        return (target_pos[0] - center_pos[0]) ** 2 \
+               + (target_pos[1] - center_pos[1]) ** 2  < constants.HOME_NEST_AREA ** 2
+
     def __get_state_vars(self):
         """Returns a tuple containing the relevant information for the learning
         part. The elements (in this order) are:

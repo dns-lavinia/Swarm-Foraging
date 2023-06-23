@@ -33,7 +33,7 @@ class SwarmController:
     # The direction of the rotation has to be given by vrot.
     ROT_ANGLE = math.pi / 5
 
-    SWARM_RADIUS = 21  # in cm
+    SWARM_RADIUS = 23  # in cm
 
     # Create and save the logger for this class
     logger = log.create_logger(name="Swarm",

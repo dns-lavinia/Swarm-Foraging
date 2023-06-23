@@ -10,7 +10,7 @@ from keras.layers import Dense, Flatten
 from keras.optimizers import Adam
 
 from rl.agents import SARSAAgent, DQNAgent
-from rl.policy import BoltzmannQPolicy, EpsGreedyQPolicy, LinearAnnealedPolicy
+from rl.policy import BoltzmannQPolicy
 from rl.memory import SequentialMemory
 
 # Local imports 
@@ -101,7 +101,7 @@ def run_episodes_dqn(mode=None):
     dqn.compile(Adam(learning_rate=3e-4), metrics=['mae'])
     
     if mode == "test":
-        weights_filename = f'models/dqn_weights_2023-06-01 16:44:28.838974.h5f'
+        weights_filename = "data/dqn_weights_2023-06-01 16:44:28.838974.h5f"
 
         # load the weights
         dqn.load_weights(weights_filename)
@@ -140,14 +140,17 @@ def run_episodes_sarsa(mode=None):
     sarsa.compile(Adam(learning_rate=3e-4), metrics=['mae'])
     
     if mode == "test":
-        weights_filename = f'models/sarsa_weights_2023-06-01 16:44:28.838974.h5f'
+        weights_filename = "data/sarsa_weights_2023-06-21 14:18:26.608588.h5f"
 
         # load the weights
         sarsa.load_weights(weights_filename)
 
-        sarsa.test(sim,
-                   nb_episodes=5,
-                   nb_max_episode_steps=constants.MAX_EP_STEPS)
+        history = sarsa.test(sim,
+                             nb_episodes=100,
+                             nb_max_episode_steps=constants.MAX_EP_STEPS)
+        
+        print(history.history)
+        dump_to_file(history.history, prefix="sarsa-3")
 
         return 
 
@@ -167,6 +170,4 @@ def dump_to_file(data, prefix):
         json.dump(data, f, default=int)
 
 if __name__ == "__main__":
-    # run_episodes_sarsa()
-    run_episodes_dqn()
-    # run_random()
+    run_episodes_sarsa("test")

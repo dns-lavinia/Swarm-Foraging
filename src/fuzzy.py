@@ -107,16 +107,9 @@ class DomainModified(Domain):
     """Extends the `Domain` class by adding a new way to plot all of the Sets
     that are part of the Domain better."""
 
-    __slots__ = ["_name", "_low", "_high", "_res", "_sets", "_fig"]
-
-    def __init__(self, name, low, high, *, res=1, sets: dict = None):
-        super(DomainModified, self).__init__(name, low, high, res=res, sets=sets)
-
-        # Use a figure instead of a normal plot
-        self._fig = plt.figure()
-
     def view(self):
         """Plot all of the terms in the set."""
+        fig = plt.figure()
 
         for s in self._sets.values():
             s.plot()
@@ -128,7 +121,8 @@ class DomainModified(Domain):
         # Show the fuzzy terms names
         leg = plt.legend(loc='lower right')
 
-        self._fig.show()
+        fig.show()
+
 
 def plot(set_obj):
     """Plot a Set only as much as it is needed (does not plot all of the values
@@ -182,8 +176,10 @@ def singleton(p, *, no_m=0, c_m=1):
         return c_m if math.isclose(x, p, abs_tol=1e-9) else no_m
     return f
 
+
 # Override the method that plots a Set so it looks smoother and better
 Set.plot = plot
+
 
 class RobotFuzzySystem:
     def __init__(self):
@@ -203,17 +199,17 @@ class RobotFuzzySystem:
 
         # Fuzzy set representing the distance to the goal 
         self.dist = DomainModified(name="Distance to goal", low=0, high=2000, res=5)
-        self.dist.near = linear(m=-1.0/20, b=1.0)
-        self.dist.med = triangular(low=15, high=125, c=70)
-        self.dist.far = linear(m=1.0/1920, b=-1.0/24)
+        self.dist.near = linear(m=-1.0/40, b=1.0)
+        self.dist.med = triangular(low=30, high=200)
+        self.dist.far = linear(m=1.0/1830, b=-17.0/183)
 
-        # Fuzzy set representing the angle of the robot itself
+        # Fuzzy set representing the angle of the robot itself relative to the goal
         self.ang = DomainModified(name="Angle of robot", low=-3.2, high=3.2, res=0.1)
-        self.ang.farl = linear(m=-1.0/2.8, b=-0.4/2.8)
+        self.ang.farl = linear(m=-1.0/2.4, b=-0.8/2.4)
         self.ang.medl = triangular(low=-1.2, high=0)
         self.ang.near = triangular(low=-0.1, high=0.1)
         self.ang.medr = triangular(low=0, high=1.2)
-        self.ang.farr = linear(m=1.0/2.8, b=-0.4/2.8)
+        self.ang.farr = linear(m=1.0/2.4, b=-0.8/2.4)
 
         # Fuzzy set representing the rotational speed
         self.vrot = DomainModified(name="Rotational speed", low=-2.0, high=2.0, res=0.1)
@@ -243,8 +239,9 @@ class RobotFuzzySystem:
 
         # Add the fuzzy set terms
         percep.near = linear(m=-1.0/55, b=1.0)
-        percep.far = triangular(low=48, high=150, c=100)
-        percep.emer = linear(m=1.0/300, b=-1.0/3) 
+        percep.med = triangular(low=48, high=150, c=100)
+        percep.far = triangular(low=100, high=350)
+        percep.emer = linear(m=1.0/80.0, b=-4.0) 
 
         return percep
 
@@ -256,12 +253,24 @@ class RobotFuzzySystem:
         """
 
         return {
-            (self.left.emer, self.right.emer, self.front.emer) : self.vrot.right,
-            (self.left.emer, self.right.emer, self.front.far) : self.vrot.none,
-            (self.left.emer, self.right.far) : self.vrot.hright,
-            (self.right.emer, self.left.far, self.front.far) : self.vrot.hleft,
-            (self.left.near, self.right.far) : self.vrot.right,
-            (self.right.near, self.left.far) : self.vrot.left
+            (self.left.emer, self.right.emer, self.front.emer) : self.vrot.right,  # base
+            (self.left.emer, self.right.emer, self.front.far) : self.vrot.none,  # base
+            (self.left.emer, self.right.emer, self.front.med) : self.vrot.none,
+            (self.left.emer, self.right.emer, self.front.near) : self.vrot.none,
+
+            (self.left.emer, self.right.far) : self.vrot.hright,  # base
+            (self.left.emer, self.right.med) : self.vrot.right,
+
+            (self.right.emer, self.left.far) : self.vrot.hleft,  # base
+            (self.right.emer, self.left.med) : self.vrot.left,
+            
+            (self.left.near, self.right.far) : self.vrot.right,  # base
+            (self.left.med, self.right.far) : self.vrot.right,
+            (self.left.med, self.right.emer) : self.vrot.right,
+
+            (self.right.near, self.left.far) : self.vrot.left,  # base
+            (self.right.med, self.left.far) : self.vrot.left,
+            (self.right.med, self.left.emer) : self.vrot.left,
         }
     
     def __get_rendevous_rules_vrot(self):
@@ -294,12 +303,12 @@ class RobotFuzzySystem:
             (self.front.near,) : self.vtrans.medium 
         }
     
-    def flc_combined(self, inp_left, inp_front, inp_right, inp_ang, inp_dist):
+    def evaluate(self, inp_left, inp_front, inp_right, inp_ang, inp_dist):
         """Fuzzy logic controller that combines the rendevous and avoidance FLCs.
         
         Returns:
-            [float, float]: List containing the defuzzified values for vrot (the
-            rotational speed) and for vtrans (translational speed) in this order."""
+            [float, float]: List containing the defuzzified values for vtrans 
+            (translational speed) and for vrot (rotational speed) in this order."""
 
         input_data = {
             self.left: inp_left,
@@ -318,9 +327,9 @@ class RobotFuzzySystem:
             rule_updated = antecedents + (self.dist.far, self.dist.med,)
             avoidance_rules[rule_updated] = consequent
         
-        rules_vrot = RuleModified((rendevous_rules_vrot | avoidance_rules))
         rules_vtrans = RuleModified(rendevous_rules_vtrans)
+        rules_vrot = RuleModified((rendevous_rules_vrot | avoidance_rules))
 
         # Returned the defuzzified results separate for vtrans and vrot
-        return rules_vrot(input_data, method="tagaki-sugeno-0"), \
-               rules_vtrans(input_data, method="tagaki-sugeno-0")
+        return rules_vtrans(input_data, method="tagaki-sugeno-0"), \
+                rules_vrot(input_data, method="tagaki-sugeno-0")

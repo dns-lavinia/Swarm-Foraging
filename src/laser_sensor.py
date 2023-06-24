@@ -4,7 +4,8 @@ import numpy as np
 
 # Local imports
 import constants 
-    
+
+
 # This class was based on the sensor.py module that can be found at:   
 # https://github.com/charleslf2/2D-simulation-of-Simulataneous-Localisation-And-Maping-SLAM-               
 class LaserSensor:
@@ -25,7 +26,7 @@ class LaserSensor:
             angle_space  (int, optional): The space in degrees between the 
             angular readings. Defaults to 15 (degrees).
 
-            position  (int, optional): The position where the LaserSensor is 
+            position  ((int, int), optional): The position where the LaserSensor is 
             placed on in the pymunk space.
 
             body_angle  (int, optional): The orientation of the body that is 
@@ -41,7 +42,7 @@ class LaserSensor:
         self.angle_space = angle_space  # Leave this amount of space between readings
 
         # Body dependent parameters
-        self.position = (position[0]+ 100, position[1])
+        self.position = (position[0]+100, position[1])
         self.sensor_angle = body_angle
         self.body_radius = body_radius
 
@@ -93,11 +94,13 @@ class LaserSensor:
         """Perform all of the angular readings along the sensor's axis and check 
         if an object was found.
         
-        Returns a list containing the coordinates of obsticales or None if no
-        obstacle was found."""
+        Returns a list containing all angular readings.
+        
+        Args:
+            obj_color (str): The color of the object to detect."""
         
         arena_w, arena_h = self.screen.get_size()
-        obstacle_coord = []
+        readings = []
 
         for angle_idx in range(self.n_readings):
             angle = math.degrees(self.sensor_angle) + self.start_angle + \
@@ -109,9 +112,12 @@ class LaserSensor:
             # Get the position of the extremity of the ray
             x_fin, y_fin = self.__get_fin_pos(angle, self.range)
 
+            # Flag used to check if an object was found for every reading
+            found_object = False
+
             # Along the line of the ray, check if there is any object 
-            for i in range(0, 100):
-                u = i / 100
+            for i in range(0, 150):
+                u = i / 150
 
                 # Get the position on the line
                 x_line = int((1-u) * pos_start[0] + u * x_fin)
@@ -122,21 +128,30 @@ class LaserSensor:
                     # Get the color of the point 
                     color = self.screen.get_at((x_line, y_line))
                     
-                    # If the color is different from the background of the 
-                    # screen, then an objstacle was found
-                    if (color[0], color[1], color[2]) != constants.COLOR["artichoke"]:
+                    # If the color represents the color of an obstacle
+                    if (color[0], color[1], color[2]) != constants.COLOR["artichoke"] or \
+                        (color[0], color[1], color[2]) != constants.COLOR["auburn"] or \
+                        (color[0], color[1], color[2]) != (0, 0, 0):
+                        found_object = True
+
                         distance = self.__get_dist((x_line, y_line))
                         obstacle_data = self.__add_noise(distance, angle)
 
                         # Since an obstacle was found, add it to the list
                         # Record the position the obstacle was found at 
                         # and also the current position of the laser
-                        obstacle_coord.append([obstacle_data, self.position])
-
+                        readings.insert(angle_idx, obstacle_data[0])
+                        
                         break 
+            
+            if not found_object:
+                distance = self.__get_dist((x_fin, y_fin))
+                data = self.__add_noise(distance, angle)
+
+                readings.insert(angle_idx, data[0])
         
         # Return the coordinates of the obstacles or None if there isn't any
-        return obstacle_coord if len(obstacle_coord) > 0 else None
+        return readings if len(readings) > 0 else None
 
     def draw_sensor_angles(self):
         for angle_idx in range(self.n_readings):
@@ -150,13 +165,13 @@ class LaserSensor:
             pos_fin = self.__get_fin_pos(angle, self.range)
 
             # Draw a red line representing the ray
-            pygame.draw.line(self.screen, (255, 0, 0), pos_start, pos_fin, 1)
-
+            pygame.draw.line(self.screen, (255, 0, 0), pos_start, pos_fin, 2)
     
     def __add_noise(self, distance, angle):
         """Return the distance and the angle of the detected object with noise
         added to the measurement. This noise is simply a random value in the
         vicinity of the actual measurement."""
+        
         sigma = np.array([0.5, 0.01])
 
         mean = np.array([distance, angle])

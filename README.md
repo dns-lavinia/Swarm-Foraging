@@ -1,4 +1,4 @@
-# Bachelor-Project
+## Overview
 
 The current project is intended to be used as part of the Bachelor Thesis. 
 
